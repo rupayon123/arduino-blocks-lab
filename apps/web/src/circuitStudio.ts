@@ -47,12 +47,76 @@ export type CircuitStudioEvent = {
 
 export type CircuitStudioBenchTestTone = "output" | "input" | "motion" | "display" | "serial";
 
+export type CircuitStudioBenchSimulationKind =
+  | "digital-output"
+  | "analog-output"
+  | "serial-print"
+  | "analog-serial"
+  | "digital-serial"
+  | "button-led"
+  | "servo-knob"
+  | "servo-angle"
+  | "rgb-output"
+  | "ultrasonic"
+  | "dht"
+  | "display-text"
+  | "neopixel"
+  | "tone"
+  | "relay"
+  | "ir-serial";
+
+export type CircuitStudioBenchControl =
+  | {
+      id: string;
+      label: string;
+      kind: "range";
+      min: number;
+      max: number;
+      step: number;
+      defaultValue: number;
+      unit?: string;
+      lowLabel?: string;
+      highLabel?: string;
+    }
+  | {
+      id: string;
+      label: string;
+      kind: "toggle";
+      defaultValue: boolean;
+      offLabel: string;
+      onLabel: string;
+    }
+  | {
+      id: string;
+      label: string;
+      kind: "choice";
+      defaultValue: string;
+      options: Array<{ value: string; label: string }>;
+    };
+
+export type CircuitStudioBenchControlValue = number | boolean | string;
+
+export type CircuitStudioBenchReading = {
+  id: string;
+  label: string;
+  value: string;
+  tone: CircuitStudioBenchTestTone;
+};
+
+export type CircuitStudioBenchSimulation = {
+  kind: CircuitStudioBenchSimulationKind;
+  controls: CircuitStudioBenchControl[];
+  metadata: Record<string, string | number | boolean>;
+};
+
 export type CircuitStudioBenchTest = {
   id: string;
   title: string;
   setup: string;
   expected: string;
   tone: CircuitStudioBenchTestTone;
+  simulation: CircuitStudioBenchSimulation;
+  readings: CircuitStudioBenchReading[];
 };
 
 export type CircuitStudioModel = {
@@ -337,142 +401,491 @@ function highState(value: "HIGH" | "LOW" | boolean) {
   return value === "HIGH" || value === true;
 }
 
-function benchTestFromStep(step: ProgramStep, index: number, project: ProjectDocument, connections: WiringCanvasConnection[]): CircuitStudioBenchTest | undefined {
-  const id = `bench-${index}-${step.kind}`;
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function metadataText(simulation: CircuitStudioBenchSimulation, key: string, fallback = "") {
+  const value = simulation.metadata[key];
+  return typeof value === "string" ? value : fallback;
+}
+
+function metadataNumber(simulation: CircuitStudioBenchSimulation, key: string, fallback = 0) {
+  const value = simulation.metadata[key];
+  return typeof value === "number" ? value : fallback;
+}
+
+function controlNumber(values: Record<string, CircuitStudioBenchControlValue>, id: string, fallback: number) {
+  const value = values[id];
+  return typeof value === "number" ? value : fallback;
+}
+
+function controlBoolean(values: Record<string, CircuitStudioBenchControlValue>, id: string, fallback: boolean) {
+  const value = values[id];
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function controlString(values: Record<string, CircuitStudioBenchControlValue>, id: string, fallback: string) {
+  const value = values[id];
+  return typeof value === "string" ? value : fallback;
+}
+
+function reading(id: string, label: string, value: string, tone: CircuitStudioBenchTestTone): CircuitStudioBenchReading {
+  return { id, label, value, tone };
+}
+
+export function defaultBenchControlValues(test: CircuitStudioBenchTest) {
+  return Object.fromEntries(test.simulation.controls.map((control) => [control.id, control.defaultValue])) as Record<string, CircuitStudioBenchControlValue>;
+}
+
+export function simulateBenchReadings(test: CircuitStudioBenchTest, values: Record<string, CircuitStudioBenchControlValue> = defaultBenchControlValues(test)) {
+  const simulation = test.simulation;
+  switch (simulation.kind) {
+    case "digital-output": {
+      const state = controlBoolean(values, "state", Boolean(simulation.metadata.defaultState));
+      return [reading("state", metadataText(simulation, "componentLabel", "Output"), state ? "ON / HIGH" : "OFF / LOW", "output")];
+    }
+    case "analog-output": {
+      const pwm = Math.round(clamp(controlNumber(values, "pwm", metadataNumber(simulation, "defaultPwm", 128)), 0, 255));
+      return [
+        reading("pwm", "PWM value", String(pwm), "output"),
+        reading("strength", metadataText(simulation, "componentLabel", "Output"), `${Math.round((pwm / 255) * 100)}% power`, "output")
+      ];
+    }
+    case "serial-print":
+      return [reading("serial", "Serial Monitor", metadataText(simulation, "text", ""), "serial")];
+    case "analog-serial": {
+      const analog = Math.round(clamp(controlNumber(values, "analog", 512), 0, 1023));
+      return [reading("serial", "Serial Monitor", `${metadataText(simulation, "componentLabel", "Analog input")}: ${analog}`, "serial")];
+    }
+    case "digital-serial": {
+      const state = controlBoolean(values, "state", false);
+      return [reading("serial", "Serial Monitor", `${metadataText(simulation, "componentLabel", "Digital input")}: ${state ? "HIGH" : "LOW"}`, "serial")];
+    }
+    case "button-led": {
+      const pressed = controlBoolean(values, "pressed", false);
+      return [
+        reading("button", metadataText(simulation, "buttonLabel", "Button"), pressed ? "LOW pressed" : "HIGH released", "input"),
+        reading("led", metadataText(simulation, "ledLabel", "LED"), pressed ? "ON" : "OFF", "output")
+      ];
+    }
+    case "servo-knob": {
+      const analog = Math.round(clamp(controlNumber(values, "analog", 512), 0, 1023));
+      const angle = Math.round((analog / 1023) * 180);
+      return [
+        reading("analog", metadataText(simulation, "potLabel", "Knob"), String(analog), "input"),
+        reading("angle", metadataText(simulation, "servoLabel", "Servo"), `${angle} deg`, "motion")
+      ];
+    }
+    case "servo-angle": {
+      const angle = Math.round(clamp(controlNumber(values, "angle", metadataNumber(simulation, "angle", 90)), 0, 180));
+      return [reading("angle", metadataText(simulation, "componentLabel", "Servo"), `${angle} deg`, "motion")];
+    }
+    case "rgb-output": {
+      const red = Math.round(clamp(controlNumber(values, "red", metadataNumber(simulation, "red", 0)), 0, 255));
+      const green = Math.round(clamp(controlNumber(values, "green", metadataNumber(simulation, "green", 0)), 0, 255));
+      const blue = Math.round(clamp(controlNumber(values, "blue", metadataNumber(simulation, "blue", 0)), 0, 255));
+      return [reading("rgb", metadataText(simulation, "componentLabel", "RGB LED"), `rgb(${red}, ${green}, ${blue})`, "output")];
+    }
+    case "ultrasonic": {
+      const distance = Math.round(clamp(controlNumber(values, "distance", 42), 2, 400));
+      return [
+        reading("echo", "Echo time", `${Math.round(distance * 58)} us`, "input"),
+        reading("serial", "Serial Monitor", `distance_cm: ${distance}`, "serial")
+      ];
+    }
+    case "dht": {
+      const tempC = Math.round(clamp(controlNumber(values, "tempC", 22), -10, 50));
+      const humidity = Math.round(clamp(controlNumber(values, "humidity", 45), 0, 100));
+      return [
+        reading("temp", "temperature_c", `${tempC} C`, "serial"),
+        reading("humidity", "humidity", `${humidity}%`, "serial")
+      ];
+    }
+    case "display-text":
+      return [reading("display", metadataText(simulation, "componentLabel", "Display"), metadataText(simulation, "text", ""), "display")];
+    case "neopixel": {
+      const red = Math.round(clamp(controlNumber(values, "red", metadataNumber(simulation, "red", 0)), 0, 255));
+      const green = Math.round(clamp(controlNumber(values, "green", metadataNumber(simulation, "green", 0)), 0, 255));
+      const blue = Math.round(clamp(controlNumber(values, "blue", metadataNumber(simulation, "blue", 0)), 0, 255));
+      return [reading("pixels", metadataText(simulation, "componentLabel", "NeoPixels"), `all pixels rgb(${red}, ${green}, ${blue})`, "output")];
+    }
+    case "tone": {
+      const frequency = Math.round(clamp(controlNumber(values, "frequency", metadataNumber(simulation, "frequency", 440)), 31, 4978));
+      const duration = Math.round(clamp(controlNumber(values, "duration", metadataNumber(simulation, "duration", 250)), 50, 2000));
+      return [reading("tone", metadataText(simulation, "componentLabel", "Buzzer"), `${frequency} Hz for ${duration} ms`, "output")];
+    }
+    case "relay": {
+      const state = controlBoolean(values, "state", Boolean(simulation.metadata.defaultState));
+      return [reading("relay", metadataText(simulation, "componentLabel", "Relay"), state ? "closed / energized" : "open / relaxed", "output")];
+    }
+    case "ir-serial": {
+      const code = controlString(values, "code", "0xFFA25D");
+      return [reading("serial", "Serial Monitor", `IR code: ${code}`, "serial")];
+    }
+    default:
+      return [];
+  }
+}
+
+function withReadings(test: Omit<CircuitStudioBenchTest, "readings">): CircuitStudioBenchTest {
+  const fullTest = { ...test, readings: [] };
+  return { ...fullTest, readings: simulateBenchReadings(fullTest) };
+}
+
+function numericValue(value: number | string | undefined, fallback: number) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function simulationFromStep(step: ProgramStep, project: ProjectDocument): CircuitStudioBenchSimulation | undefined {
   switch (step.kind) {
     case "digital-write": {
       const isHigh = highState(step.value);
       return {
+        kind: "digital-output",
+        controls: [{ id: "state", label: "Pin state", kind: "toggle", defaultValue: isHigh, offLabel: "LOW", onLabel: "HIGH" }],
+        metadata: { componentLabel: componentLabel(project, step.componentId), defaultState: isHigh }
+      };
+    }
+    case "analog-write": {
+      const defaultPwm = clamp(Math.round(numericValue(step.value, 128)), 0, 255);
+      return {
+        kind: "analog-output",
+        controls: [
+          { id: "pwm", label: "PWM", kind: "range", min: 0, max: 255, step: 1, defaultValue: defaultPwm, lowLabel: "off", highLabel: "full" }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId), defaultPwm }
+      };
+    }
+    case "serial-print":
+      return {
+        kind: "serial-print",
+        controls: [],
+        metadata: { text: String(step.value) }
+      };
+    case "read-analog-serial":
+      return {
+        kind: "analog-serial",
+        controls: [
+          {
+            id: "analog",
+            label: "Analog value",
+            kind: "range",
+            min: 0,
+            max: 1023,
+            step: 1,
+            defaultValue: 512,
+            lowLabel: "0",
+            highLabel: "1023"
+          }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId) }
+      };
+    case "read-digital-serial":
+      return {
+        kind: "digital-serial",
+        controls: [{ id: "state", label: "Digital input", kind: "toggle", defaultValue: false, offLabel: "LOW", onLabel: "HIGH" }],
+        metadata: { componentLabel: componentLabel(project, step.componentId) }
+      };
+    case "button-controls-led":
+      return {
+        kind: "button-led",
+        controls: [{ id: "pressed", label: "Button", kind: "toggle", defaultValue: false, offLabel: "Released", onLabel: "Pressed" }],
+        metadata: {
+          buttonLabel: componentLabel(project, step.buttonId),
+          ledLabel: componentLabel(project, step.ledId)
+        }
+      };
+    case "potentiometer-controls-servo":
+      return {
+        kind: "servo-knob",
+        controls: [
+          {
+            id: "analog",
+            label: "Knob value",
+            kind: "range",
+            min: 0,
+            max: 1023,
+            step: 1,
+            defaultValue: 512,
+            lowLabel: "0 deg",
+            highLabel: "180 deg"
+          }
+        ],
+        metadata: {
+          potLabel: componentLabel(project, step.potentiometerId),
+          servoLabel: componentLabel(project, step.servoId)
+        }
+      };
+    case "servo-write": {
+      const angle = clamp(Math.round(numericValue(step.angle, 90)), 0, 180);
+      return {
+        kind: "servo-angle",
+        controls: [
+          { id: "angle", label: "Servo angle", kind: "range", min: 0, max: 180, step: 1, defaultValue: angle, unit: "deg", lowLabel: "0", highLabel: "180" }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId), angle }
+      };
+    }
+    case "rgb-write":
+      return {
+        kind: "rgb-output",
+        controls: [
+          { id: "red", label: "Red", kind: "range", min: 0, max: 255, step: 1, defaultValue: step.red },
+          { id: "green", label: "Green", kind: "range", min: 0, max: 255, step: 1, defaultValue: step.green },
+          { id: "blue", label: "Blue", kind: "range", min: 0, max: 255, step: 1, defaultValue: step.blue }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId), red: step.red, green: step.green, blue: step.blue }
+      };
+    case "ultrasonic-serial":
+      return {
+        kind: "ultrasonic",
+        controls: [
+          {
+            id: "distance",
+            label: "Target distance",
+            kind: "range",
+            min: 2,
+            max: 400,
+            step: 1,
+            defaultValue: 42,
+            unit: "cm",
+            lowLabel: "close",
+            highLabel: "far"
+          }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId) }
+      };
+    case "dht-serial":
+      return {
+        kind: "dht",
+        controls: [
+          { id: "tempC", label: "Temperature", kind: "range", min: -10, max: 50, step: 1, defaultValue: 22, unit: "C", lowLabel: "cold", highLabel: "hot" },
+          { id: "humidity", label: "Humidity", kind: "range", min: 0, max: 100, step: 1, defaultValue: 45, unit: "%", lowLabel: "dry", highLabel: "humid" }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId) }
+      };
+    case "lcd-print":
+    case "oled-print":
+      return {
+        kind: "display-text",
+        controls: [],
+        metadata: { componentLabel: componentLabel(project, step.componentId), text: step.text }
+      };
+    case "neopixel-fill":
+      return {
+        kind: "neopixel",
+        controls: [
+          { id: "red", label: "Red", kind: "range", min: 0, max: 255, step: 1, defaultValue: step.red },
+          { id: "green", label: "Green", kind: "range", min: 0, max: 255, step: 1, defaultValue: step.green },
+          { id: "blue", label: "Blue", kind: "range", min: 0, max: 255, step: 1, defaultValue: step.blue }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId), red: step.red, green: step.green, blue: step.blue }
+      };
+    case "tone":
+      return {
+        kind: "tone",
+        controls: [
+          {
+            id: "frequency",
+            label: "Frequency",
+            kind: "range",
+            min: 31,
+            max: 4978,
+            step: 1,
+            defaultValue: step.frequency,
+            unit: "Hz",
+            lowLabel: "low",
+            highLabel: "high"
+          },
+          {
+            id: "duration",
+            label: "Duration",
+            kind: "range",
+            min: 50,
+            max: 2000,
+            step: 10,
+            defaultValue: step.duration ?? 250,
+            unit: "ms",
+            lowLabel: "short",
+            highLabel: "long"
+          }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId), frequency: step.frequency, duration: step.duration ?? 250 }
+      };
+    case "relay-write": {
+      const isHigh = highState(step.value);
+      return {
+        kind: "relay",
+        controls: [{ id: "state", label: "Relay input", kind: "toggle", defaultValue: isHigh, offLabel: "LOW", onLabel: "HIGH" }],
+        metadata: { componentLabel: componentLabel(project, step.componentId), defaultState: isHigh }
+      };
+    }
+    case "ir-read-serial":
+      return {
+        kind: "ir-serial",
+        controls: [
+          {
+            id: "code",
+            label: "Remote button",
+            kind: "choice",
+            defaultValue: "0xFFA25D",
+            options: [
+              { value: "0xFFA25D", label: "Power" },
+              { value: "0xFF629D", label: "Up" },
+              { value: "0xFF22DD", label: "Left" }
+            ]
+          }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId) }
+      };
+    case "delay":
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+function benchTestFromStep(step: ProgramStep, index: number, project: ProjectDocument, connections: WiringCanvasConnection[]): CircuitStudioBenchTest | undefined {
+  const id = `bench-${index}-${step.kind}`;
+  const simulation = simulationFromStep(step, project);
+  if (!simulation) return undefined;
+  const create = (test: Omit<CircuitStudioBenchTest, "simulation" | "readings">) => withReadings({ ...test, simulation });
+  switch (step.kind) {
+    case "digital-write": {
+      const isHigh = highState(step.value);
+      return create({
         id,
         title: `Watch ${componentLabel(project, step.componentId)}`,
         setup: `Force ${signalLabel(connections, step.componentId)} ${isHigh ? "HIGH" : "LOW"} in the bench.`,
         expected: `${componentLabel(project, step.componentId)} should ${isHigh ? "turn on or energize" : "turn off or relax"}.`,
         tone: "output"
-      };
+      });
     }
     case "analog-write":
-      return {
+      return create({
         id,
         title: `Sweep ${componentLabel(project, step.componentId)}`,
         setup: `Try PWM 0, 128, and ${step.value} on ${signalLabel(connections, step.componentId)}.`,
         expected: "Brightness, speed, or output strength should rise smoothly as PWM increases.",
         tone: "output"
-      };
+      });
     case "serial-print":
-      return {
+      return create({
         id,
         title: "Open Serial Monitor",
         setup: "Start the bench serial console at the sketch baud rate.",
         expected: `${JSON.stringify(step.value)} should print${step.newline === false ? "" : " on its own line"}.`,
         tone: "serial"
-      };
+      });
     case "read-analog-serial":
-      return {
+      return create({
         id,
         title: `Move ${componentLabel(project, step.componentId)}`,
         setup: "Drag the analog test value from 0 to 1023.",
         expected: `${componentLabel(project, step.componentId)} readings should stream as changing serial values.`,
         tone: "serial"
-      };
+      });
     case "read-digital-serial":
-      return {
+      return create({
         id,
         title: `Toggle ${componentLabel(project, step.componentId)}`,
         setup: "Flip the digital test state between LOW and HIGH.",
         expected: `${componentLabel(project, step.componentId)} should print the matching digital state.`,
         tone: "serial"
-      };
+      });
     case "button-controls-led":
-      return {
+      return create({
         id,
         title: "Press the button",
         setup: `${componentLabel(project, step.buttonId)} reads LOW while pressed, then HIGH when released.`,
         expected: `${componentLabel(project, step.ledId)} turns on during the press and turns off after release.`,
         tone: "input"
-      };
+      });
     case "potentiometer-controls-servo":
-      return {
+      return create({
         id,
         title: "Turn the knob",
         setup: `${componentLabel(project, step.potentiometerId)} moves through 0, 512, and 1023.`,
         expected: `${componentLabel(project, step.servoId)} should sweep near 0, 90, and 180 degrees.`,
         tone: "motion"
-      };
+      });
     case "servo-write":
-      return {
+      return create({
         id,
         title: `Check ${componentLabel(project, step.componentId)}`,
         setup: `Set the bench servo angle to ${step.angle}.`,
         expected: `${componentLabel(project, step.componentId)} should rotate to the requested position without jitter.`,
         tone: "motion"
-      };
+      });
     case "rgb-write":
-      return {
+      return create({
         id,
         title: "Preview RGB mix",
         setup: `Set red ${step.red}, green ${step.green}, and blue ${step.blue}.`,
         expected: `${componentLabel(project, step.componentId)} should show the same blended color.`,
         tone: "output"
-      };
+      });
     case "ultrasonic-serial":
-      return {
+      return create({
         id,
         title: "Move the target",
         setup: "Try close, middle, and far target distances in centimeters.",
         expected: `${componentLabel(project, step.componentId)} should print distance_cm values that follow the target.`,
         tone: "serial"
-      };
+      });
     case "dht-serial":
-      return {
+      return create({
         id,
         title: "Change room weather",
         setup: "Try cool/dry, room, and warm/humid readings.",
         expected: `${componentLabel(project, step.componentId)} should print temperature and humidity without NaN errors.`,
         tone: "serial"
-      };
+      });
     case "lcd-print":
     case "oled-print":
-      return {
+      return create({
         id,
         title: "Read the display",
         setup: `Clear the screen, then write ${JSON.stringify(step.text)}.`,
         expected: `${componentLabel(project, step.componentId)} should show the text without clipping.`,
         tone: "display"
-      };
+      });
     case "neopixel-fill":
-      return {
+      return create({
         id,
         title: "Preview strip color",
         setup: `Fill the strip with RGB(${step.red}, ${step.green}, ${step.blue}).`,
         expected: `${componentLabel(project, step.componentId)} should light every pixel with the chosen color.`,
         tone: "output"
-      };
+      });
     case "tone":
-      return {
+      return create({
         id,
         title: "Listen for tone",
         setup: `Play ${step.frequency} Hz for ${step.duration ?? 250} ms.`,
         expected: `${componentLabel(project, step.componentId)} should chirp once at the chosen pitch.`,
         tone: "output"
-      };
+      });
     case "relay-write": {
       const isHigh = highState(step.value);
-      return {
+      return create({
         id,
         title: `Switch ${componentLabel(project, step.componentId)}`,
         setup: `Set the relay control pin ${isHigh ? "HIGH" : "LOW"}.`,
         expected: `${componentLabel(project, step.componentId)} should ${isHigh ? "click closed" : "open"} in the bench preview.`,
         tone: "output"
-      };
+      });
     }
     case "ir-read-serial":
-      return {
+      return create({
         id,
         title: "Send an IR code",
         setup: "Pick a remote button code in the bench input.",
         expected: `${componentLabel(project, step.componentId)} should print the received code in serial.`,
         tone: "serial"
-      };
+      });
     case "delay":
       return undefined;
     default:

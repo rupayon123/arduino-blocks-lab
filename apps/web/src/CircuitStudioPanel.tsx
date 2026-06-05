@@ -1,6 +1,17 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, Cpu, RadioTower, Sparkles, Zap } from "lucide-react";
-import type { CircuitStudioBenchTestTone, CircuitStudioEventTone, CircuitStudioModel, CircuitStudioStepState } from "./circuitStudio";
+import {
+  defaultBenchControlValues,
+  simulateBenchReadings,
+  type CircuitStudioBenchControl,
+  type CircuitStudioBenchControlValue,
+  type CircuitStudioBenchReading,
+  type CircuitStudioBenchTest,
+  type CircuitStudioBenchTestTone,
+  type CircuitStudioEventTone,
+  type CircuitStudioModel,
+  type CircuitStudioStepState
+} from "./circuitStudio";
 
 type Props = {
   model: CircuitStudioModel;
@@ -30,7 +41,110 @@ function wirePath(wire: CircuitStudioModel["wires"][number]) {
   return `M ${wire.x1} ${wire.y1} C ${wire.c1x} ${wire.c1y}, ${wire.c2x} ${wire.c2y}, ${wire.x2} ${wire.y2}`;
 }
 
+type BenchControlState = Record<string, CircuitStudioBenchControlValue>;
+
+function controlKey(testId: string, controlId: string) {
+  return `${testId}:${controlId}`;
+}
+
+function valuesForTest(test: CircuitStudioBenchTest, controlState: BenchControlState) {
+  const values = defaultBenchControlValues(test);
+  test.simulation.controls.forEach((control) => {
+    const key = controlKey(test.id, control.id);
+    const value = controlState[key];
+    if (value !== undefined) values[control.id] = value;
+  });
+  return values;
+}
+
+function formattedControlValue(control: CircuitStudioBenchControl, value: CircuitStudioBenchControlValue) {
+  if (control.kind === "toggle") return value ? control.onLabel : control.offLabel;
+  if (control.kind === "choice") return control.options.find((option) => option.value === value)?.label ?? String(value);
+  return `${value}${control.unit ? ` ${control.unit}` : ""}`;
+}
+
+function nextRangeValue(control: Extract<CircuitStudioBenchControl, { kind: "range" }>, value: number, direction: -1 | 1) {
+  const next = Math.max(control.min, Math.min(control.max, value + control.step * direction));
+  return Number(next.toFixed(4));
+}
+
+function BenchControl({ control, value, onChange }: { control: CircuitStudioBenchControl; value: CircuitStudioBenchControlValue; onChange: (value: CircuitStudioBenchControlValue) => void }) {
+  if (control.kind === "toggle") {
+    const pressed = Boolean(value);
+    return (
+      <button className={`bench-toggle ${pressed ? "active" : ""}`} type="button" aria-pressed={pressed} onClick={() => onChange(!pressed)}>
+        <span>{control.label}</span>
+        <strong>{pressed ? control.onLabel : control.offLabel}</strong>
+      </button>
+    );
+  }
+
+  if (control.kind === "choice") {
+    return (
+      <div className="bench-choice" role="group" aria-label={control.label}>
+        <span>{control.label}</span>
+        <div>
+          {control.options.map((option) => (
+            <button
+              className={value === option.value ? "active" : ""}
+              key={option.value}
+              type="button"
+              aria-pressed={value === option.value}
+              onClick={() => onChange(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const numericValue = typeof value === "number" ? value : control.defaultValue;
+  return (
+    <label className="bench-range">
+      <span>
+        {control.label}
+        <output>{formattedControlValue(control, numericValue)}</output>
+      </span>
+      <div className="bench-range-row">
+        <button type="button" aria-label={`Decrease ${control.label}`} onClick={() => onChange(nextRangeValue(control, numericValue, -1))}>
+          -
+        </button>
+        <input
+          type="range"
+          min={control.min}
+          max={control.max}
+          step={control.step}
+          value={numericValue}
+          onInput={(event) => onChange(Number(event.currentTarget.value))}
+          onChange={(event) => onChange(Number(event.currentTarget.value))}
+        />
+        <button type="button" aria-label={`Increase ${control.label}`} onClick={() => onChange(nextRangeValue(control, numericValue, 1))}>
+          +
+        </button>
+      </div>
+      {(control.lowLabel || control.highLabel) && (
+        <small>
+          <span>{control.lowLabel}</span>
+          <span>{control.highLabel}</span>
+        </small>
+      )}
+    </label>
+  );
+}
+
+function BenchReadout({ reading }: { reading: CircuitStudioBenchReading }) {
+  return (
+    <div className={`bench-readout ${reading.tone}`}>
+      <span>{reading.label}</span>
+      <strong>{reading.value}</strong>
+    </div>
+  );
+}
+
 export default function CircuitStudioPanel({ model }: Props) {
+  const [controlState, setControlState] = useState<BenchControlState>({});
   const readyLabel =
     model.stats.errors > 0
       ? `${model.stats.errors} fix${model.stats.errors === 1 ? "" : "es"}`
@@ -138,16 +252,42 @@ export default function CircuitStudioPanel({ model }: Props) {
               {model.benchTests.length === 0 ? (
                 <div className="empty-row">Add a behavior block to get a bench test.</div>
               ) : (
-                model.benchTests.map((test) => (
-                  <div className={`circuit-bench-test ${test.tone}`} key={test.id}>
-                    {benchIcon(test.tone)}
-                    <span>
-                      <strong>{test.title}</strong>
-                      <small>{test.setup}</small>
-                      {test.expected}
-                    </span>
-                  </div>
-                ))
+                model.benchTests.map((test) => {
+                  const values = valuesForTest(test, controlState);
+                  const readings = simulateBenchReadings(test, values);
+                  return (
+                    <div className={`circuit-bench-test ${test.tone}`} key={test.id}>
+                      {benchIcon(test.tone)}
+                      <div className="bench-test-body">
+                        <strong>{test.title}</strong>
+                        <small>{test.setup}</small>
+                        <p>{test.expected}</p>
+                        {test.simulation.controls.length > 0 && (
+                          <div className="bench-control-grid">
+                            {test.simulation.controls.map((control) => (
+                              <BenchControl
+                                control={control}
+                                key={control.id}
+                                value={values[control.id] ?? control.defaultValue}
+                                onChange={(value) =>
+                                  setControlState((current) => ({
+                                    ...current,
+                                    [controlKey(test.id, control.id)]: value
+                                  }))
+                                }
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <div className="bench-readout-grid">
+                          {(readings.length > 0 ? readings : test.readings).map((reading) => (
+                            <BenchReadout key={reading.id} reading={reading} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </section>
