@@ -1,25 +1,29 @@
 import { useEffect, useRef } from "react";
 import * as Blockly from "blockly/core";
-import type { ComponentInstance, ProgramStep } from "@abl/block-schema";
-import { registerArduinoBlocks, setBlocklyComponentProvider, toolbox } from "./blocklyBlocks";
+import type { ComponentDefinition, ComponentInstance, ProgramStep } from "@abl/block-schema";
+import { registerArduinoBlocks, setBlocklyComponentDefinitionProvider, setBlocklyComponentProvider, toolbox } from "./blocklyBlocks";
 import { workspaceToProgram } from "./workspaceToProgram";
 
 type Props = {
   components: ComponentInstance[];
+  componentDefinitions: ComponentDefinition[];
   xml: string;
   reloadKey: string;
   onChange: (program: ProgramStep[], blocksXml: string) => void;
 };
 
-export default function BlocklyWorkspace({ components, xml, reloadKey, onChange }: Props) {
+export default function BlocklyWorkspace({ components, componentDefinitions, xml, reloadKey, onChange }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
   const loadingRef = useRef(false);
   const componentsRef = useRef(components);
+  const componentDefinitionsRef = useRef(componentDefinitions);
   componentsRef.current = components;
+  componentDefinitionsRef.current = componentDefinitions;
 
   useEffect(() => {
     setBlocklyComponentProvider(() => componentsRef.current);
+    setBlocklyComponentDefinitionProvider(() => componentDefinitionsRef.current);
     registerArduinoBlocks();
     if (!containerRef.current) return;
     const workspace = Blockly.inject(containerRef.current, {
@@ -66,7 +70,7 @@ export default function BlocklyWorkspace({ components, xml, reloadKey, onChange 
 
   useEffect(() => {
     workspaceRef.current?.refreshToolboxSelection();
-  }, [components]);
+  }, [components, componentDefinitions]);
 
   return <div className="blockly-host" ref={containerRef} />;
 }

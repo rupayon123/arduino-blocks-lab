@@ -1,9 +1,10 @@
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
-import type { ComponentInstance } from "@abl/block-schema";
-import { components } from "@abl/catalog";
+import type { ComponentDefinition, ComponentInstance } from "@abl/block-schema";
+import { components as defaultComponents } from "@abl/catalog";
 
 let componentProvider = (): ComponentInstance[] => [];
+let componentDefinitionProvider = (): ComponentDefinition[] => defaultComponents;
 let registered = false;
 
 type Option = [string, string];
@@ -65,6 +66,10 @@ export function setBlocklyComponentProvider(provider: () => ComponentInstance[])
   componentProvider = provider;
 }
 
+export function setBlocklyComponentDefinitionProvider(provider: () => ComponentDefinition[]) {
+  componentDefinitionProvider = provider;
+}
+
 function componentOptions(componentIds: string[]): Option[] {
   const all = componentProvider();
   const options = all
@@ -74,8 +79,17 @@ function componentOptions(componentIds: string[]): Option[] {
 }
 
 function componentsByCategory(categories: string[]): Option[] {
-  const ids = components.filter((component) => categories.includes(component.category)).map((component) => component.id);
+  const ids = componentDefinitionProvider().filter((component) => categories.includes(component.category)).map((component) => component.id);
   return componentOptions(ids);
+}
+
+function componentsMatching(predicate: (component: ComponentDefinition) => boolean): Option[] {
+  const ids = componentDefinitionProvider().filter(predicate).map((component) => component.id);
+  return componentOptions(ids);
+}
+
+function signalPinLabel(component: ComponentDefinition) {
+  return component.pinLabels.signal?.toLowerCase() ?? "";
 }
 
 function numberField(value: number, min = 0, max = 1023) {
@@ -210,7 +224,12 @@ export function registerArduinoBlocks() {
     init() {
       this.appendDummyInput()
         .appendField("print analog")
-        .appendField(new Blockly.FieldDropdown(() => componentOptions(["potentiometer", "ldr"])), "SENSOR");
+        .appendField(
+          new Blockly.FieldDropdown(() =>
+            componentsMatching((component) => signalPinLabel(component).includes("analog") || String(component.defaultPins.signal ?? "").startsWith("A"))
+          ),
+          "SENSOR"
+        );
       statement(this, "#2f8f71");
     }
   };
@@ -219,7 +238,12 @@ export function registerArduinoBlocks() {
     init() {
       this.appendDummyInput()
         .appendField("print digital")
-        .appendField(new Blockly.FieldDropdown(() => componentOptions(["button", "pir"])), "SENSOR");
+        .appendField(
+          new Blockly.FieldDropdown(() =>
+            componentsMatching((component) => signalPinLabel(component).includes("digital") || typeof component.defaultPins.signal === "number")
+          ),
+          "SENSOR"
+        );
       statement(this, "#2f8f71");
     }
   };

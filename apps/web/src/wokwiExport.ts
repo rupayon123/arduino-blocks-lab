@@ -1,4 +1,4 @@
-import type { ComponentInstance, ProjectDocument, PinValue } from "@abl/block-schema";
+import type { ComponentDefinition, ComponentInstance, ProjectDocument, PinValue } from "@abl/block-schema";
 import { components as defaultComponents } from "@abl/catalog";
 
 export type WokwiPart = {
@@ -128,9 +128,9 @@ export function createWokwiDiagram(project: ProjectDocument): WokwiDiagram {
   };
 }
 
-export function unsupportedWokwiComponents(project: ProjectDocument): string[] {
+export function unsupportedWokwiComponents(project: ProjectDocument, definitions: ComponentDefinition[] = defaultComponents): string[] {
   const supported = new Set(["led", "rgb-led", "button", "potentiometer", "buzzer", "servo", "ultrasonic-hcsr04", "dht11", "dht22", "neopixel-strip"]);
   return project.components
     .filter((instance) => !supported.has(instance.componentId))
-    .map((instance) => defaultComponents.find((component) => component.id === instance.componentId)?.name ?? instance.componentId);
+    .map((instance) => definitions.find((component) => component.id === instance.componentId)?.name ?? instance.componentId);
 }

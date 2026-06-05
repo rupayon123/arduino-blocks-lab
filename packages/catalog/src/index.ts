@@ -4,7 +4,9 @@ import type {
   Catalog,
   ComponentDefinition,
   ComponentInstance,
+  ExtensionManifest,
   LessonDefinition,
+  LibraryDependency,
   PinMap,
   ProjectDocument
 } from "@abl/block-schema";
@@ -510,4 +512,301 @@ export const catalog: Catalog = {
 
 export function getComponentDefinition(componentId: string): ComponentDefinition | undefined {
   return components.find((component) => component.id === componentId);
+}
+
+export type ExtensionParseResult = {
+  manifest?: ExtensionManifest;
+  errors: string[];
+};
+
+export type CatalogMergeResult = {
+  catalog: Catalog;
+  warnings: string[];
+};
+
+const boardFamilies: Array<BoardDefinition["family"]> = ["avr", "megaavr", "renesas", "esp32", "other"];
+const componentCategories: Array<ComponentDefinition["category"]> = [
+  "output",
+  "input",
+  "sensor",
+  "display",
+  "motion",
+  "communication",
+  "power"
+];
+const blockCategories: Array<BlockDefinition["category"]> = ["logic", "input", "output", "display", "timing", "serial", "motion", "communication"];
+const blockKinds = new Set(blocks.map((block) => block.kind));
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+function stringArray(value: unknown): string[] | undefined {
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : undefined;
+}
+
+function pinMap(value: unknown): PinMap | undefined {
+  const candidate = record(value);
+  if (!candidate) return undefined;
+  return Object.values(candidate).every((item) => ["string", "number", "boolean"].includes(typeof item)) ? (candidate as PinMap) : undefined;
+}
+
+function stringRecord(value: unknown): Record<string, string> | undefined {
+  const candidate = record(value);
+  if (!candidate) return undefined;
+  return Object.values(candidate).every((item) => typeof item === "string") ? (candidate as Record<string, string>) : undefined;
+}
+
+function runtimeTemplate(value: unknown): ComponentDefinition["runtime"] | undefined {
+  if (value === undefined) return undefined;
+  const candidate = record(value);
+  if (!candidate) return undefined;
+  const runtime: ComponentDefinition["runtime"] = {};
+  for (const key of ["includes", "globals", "setup", "loop"] as const) {
+    const lines = stringArray(candidate[key]);
+    if (candidate[key] !== undefined && !lines) return undefined;
+    if (lines) runtime[key] = lines;
+  }
+  if (candidate.libraries !== undefined) {
+    if (!Array.isArray(candidate.libraries)) return undefined;
+    const parsedLibraries: Array<LibraryDependency | undefined> = candidate.libraries.map((library) => {
+      const item = record(library);
+      if (!item || typeof item.name !== "string") return undefined;
+      return {
+        name: item.name,
+        ...(typeof item.installName === "string" ? { installName: item.installName } : {}),
+        ...(typeof item.version === "string" ? { version: item.version } : {})
+      };
+    });
+    if (parsedLibraries.some((library) => !library)) return undefined;
+    runtime.libraries = parsedLibraries as LibraryDependency[];
+  }
+  return runtime;
+}
+
+function wiring(value: unknown): ComponentDefinition["wiring"] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parsed = value.map((wire) => {
+    const item = record(wire);
+    if (!item || typeof item.label !== "string" || typeof item.from !== "string" || typeof item.to !== "string") return undefined;
+    return {
+      label: item.label,
+      from: item.from,
+      to: item.to,
+      ...(typeof item.note === "string" ? { note: item.note } : {})
+    };
+  });
+  return parsed.some((wire) => !wire) ? undefined : (parsed as ComponentDefinition["wiring"]);
+}
+
+function parseBoard(value: unknown, errors: string[], path: string): BoardDefinition | undefined {
+  const item = record(value);
+  if (!item) {
+    errors.push(`${path} must be an object.`);
+    return undefined;
+  }
+  const family = item.family;
+  if (
+    typeof item.id !== "string" ||
+    typeof item.name !== "string" ||
+    typeof item.fqbn !== "string" ||
+    typeof family !== "string" ||
+    !boardFamilies.includes(family as BoardDefinition["family"])
+  ) {
+    errors.push(`${path} is missing required board fields.`);
+    return undefined;
+  }
+  const digitalPins = stringArray(item.digitalPins);
+  const analogPins = stringArray(item.analogPins);
+  const pwmPins = stringArray(item.pwmPins);
+  if (!digitalPins || !analogPins || !pwmPins) {
+    errors.push(`${path} pins must be string arrays.`);
+    return undefined;
+  }
+  return {
+    id: item.id,
+    name: item.name,
+    fqbn: item.fqbn,
+    family: family as BoardDefinition["family"],
+    digitalPins,
+    analogPins,
+    pwmPins,
+    ...(record(item.i2cPins)?.sda && record(item.i2cPins)?.scl
+      ? { i2cPins: { sda: String(record(item.i2cPins)?.sda), scl: String(record(item.i2cPins)?.scl) } }
+      : {}),
+    ...(record(item.spiPins)?.mosi && record(item.spiPins)?.miso && record(item.spiPins)?.sck
+      ? {
+          spiPins: {
+            mosi: String(record(item.spiPins)?.mosi),
+            miso: String(record(item.spiPins)?.miso),
+            sck: String(record(item.spiPins)?.sck)
+          }
+        }
+      : {})
+  };
+}
+
+function parseComponent(value: unknown, errors: string[], path: string): ComponentDefinition | undefined {
+  const item = record(value);
+  if (!item) {
+    errors.push(`${path} must be an object.`);
+    return undefined;
+  }
+  const category = item.category;
+  if (
+    typeof item.id !== "string" ||
+    typeof item.name !== "string" ||
+    typeof item.description !== "string" ||
+    typeof category !== "string" ||
+    !componentCategories.includes(category as ComponentDefinition["category"])
+  ) {
+    errors.push(`${path} is missing required component fields.`);
+    return undefined;
+  }
+  const defaultPins = pinMap(item.defaultPins);
+  const pinLabels = stringRecord(item.pinLabels);
+  const wiringHints = wiring(item.wiring);
+  const runtime = runtimeTemplate(item.runtime);
+  const simulatorHints = stringArray(item.simulatorHints);
+  if (!defaultPins || !pinLabels || !wiringHints || (item.runtime !== undefined && !runtime) || (item.simulatorHints !== undefined && !simulatorHints)) {
+    errors.push(`${path} has invalid pins, wiring, runtime, or simulator hints.`);
+    return undefined;
+  }
+  return {
+    id: item.id,
+    name: item.name,
+    category: category as ComponentDefinition["category"],
+    description: item.description,
+    defaultPins,
+    pinLabels,
+    wiring: wiringHints,
+    ...(runtime ? { runtime } : {}),
+    ...(simulatorHints ? { simulatorHints } : {})
+  };
+}
+
+function parseBlock(value: unknown, errors: string[], path: string): BlockDefinition | undefined {
+  const item = record(value);
+  if (!item) {
+    errors.push(`${path} must be an object.`);
+    return undefined;
+  }
+  if (
+    typeof item.id !== "string" ||
+    typeof item.label !== "string" ||
+    typeof item.description !== "string" ||
+    typeof item.category !== "string" ||
+    !blockCategories.includes(item.category as BlockDefinition["category"]) ||
+    typeof item.kind !== "string" ||
+    !blockKinds.has(item.kind as BlockDefinition["kind"]) ||
+    !Array.isArray(item.inputs)
+  ) {
+    errors.push(`${path} is missing required block fields or uses an unsupported block kind.`);
+    return undefined;
+  }
+  return {
+    id: item.id,
+    label: item.label,
+    category: item.category as BlockDefinition["category"],
+    kind: item.kind as BlockDefinition["kind"],
+    inputs: item.inputs as BlockDefinition["inputs"],
+    description: item.description
+  };
+}
+
+function parseLesson(value: unknown, errors: string[], path: string): LessonDefinition | undefined {
+  const item = record(value);
+  const starterProject = record(item?.starterProject);
+  if (
+    !item ||
+    typeof item.id !== "string" ||
+    typeof item.title !== "string" ||
+    typeof item.goal !== "string" ||
+    !["icon", "word", "text"].includes(String(item.level)) ||
+    !starterProject ||
+    starterProject.schemaVersion !== "1.0.0" ||
+    typeof starterProject.name !== "string" ||
+    typeof starterProject.boardId !== "string" ||
+    !Array.isArray(starterProject.components) ||
+    !Array.isArray(starterProject.program)
+  ) {
+    errors.push(`${path} is missing required lesson or starter project fields.`);
+    return undefined;
+  }
+  return {
+    id: item.id,
+    title: item.title,
+    level: item.level as LessonDefinition["level"],
+    goal: item.goal,
+    starterProject: starterProject as ProjectDocument
+  };
+}
+
+function parseArray<T>(
+  value: unknown,
+  errors: string[],
+  path: string,
+  parser: (item: unknown, errors: string[], path: string) => T | undefined
+): T[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    errors.push(`${path} must be an array.`);
+    return undefined;
+  }
+  return value.map((item, index) => parser(item, errors, `${path}[${index}]`)).filter(Boolean) as T[];
+}
+
+export function parseExtensionManifest(value: unknown): ExtensionParseResult {
+  const errors: string[] = [];
+  const item = record(value);
+  if (!item) return { errors: ["Extension manifest must be a JSON object."] };
+  if (item.formatVersion !== "1.0.0") errors.push("formatVersion must be 1.0.0.");
+  if (typeof item.id !== "string" || !/^[a-z0-9][a-z0-9._-]+$/.test(item.id)) errors.push("id must use lowercase pack id syntax.");
+  if (typeof item.name !== "string" || !item.name.trim()) errors.push("name is required.");
+  if (typeof item.version !== "string" || !item.version.trim()) errors.push("version is required.");
+
+  const parsedBoards = parseArray(item.boards, errors, "boards", parseBoard);
+  const parsedComponents = parseArray(item.components, errors, "components", parseComponent);
+  const parsedBlocks = parseArray(item.blocks, errors, "blocks", parseBlock);
+  const parsedLessons = parseArray(item.lessons, errors, "lessons", parseLesson);
+
+  if (errors.length > 0 || typeof item.id !== "string" || typeof item.name !== "string" || typeof item.version !== "string") {
+    return { errors };
+  }
+
+  return {
+    errors: [],
+    manifest: {
+      formatVersion: "1.0.0",
+      id: item.id,
+      name: item.name,
+      version: item.version,
+      boards: parsedBoards ?? [],
+      components: parsedComponents ?? [],
+      blocks: parsedBlocks ?? [],
+      lessons: parsedLessons ?? []
+    }
+  };
+}
+
+function mergeById<T extends { id: string }>(base: T[], additions: T[] | undefined, label: string, warnings: string[]): T[] {
+  const next = new Map(base.map((item) => [item.id, item]));
+  for (const item of additions ?? []) {
+    if (next.has(item.id)) warnings.push(`${label} ${item.id} replaced an existing definition.`);
+    next.set(item.id, item);
+  }
+  return Array.from(next.values());
+}
+
+export function mergeExtensionManifest(base: Catalog, manifest: ExtensionManifest): CatalogMergeResult {
+  const warnings: string[] = [];
+  return {
+    catalog: {
+      boards: mergeById(base.boards, manifest.boards, "Board", warnings),
+      components: mergeById(base.components, manifest.components, "Component", warnings),
+      blocks: mergeById(base.blocks, manifest.blocks, "Block", warnings),
+      lessons: mergeById(base.lessons, manifest.lessons, "Lesson", warnings)
+    },
+    warnings
+  };
 }

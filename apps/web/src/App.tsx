@@ -12,6 +12,7 @@ import {
   Globe2,
   Library,
   Medal,
+  PackagePlus,
   Play,
   PlugZap,
   RadioTower,
@@ -26,8 +27,15 @@ import {
   Upload,
   AlertTriangle
 } from "lucide-react";
-import type { ComponentDefinition, ComponentInstance, ProjectDocument, ProgramStep } from "@abl/block-schema";
-import { boards, catalog, components, createComponentInstance, lessons, starterProjects } from "@abl/catalog";
+import type { Catalog, ComponentDefinition, ComponentInstance, ProjectDocument, ProgramStep } from "@abl/block-schema";
+import {
+  boards as defaultBoards,
+  catalog as defaultCatalog,
+  createComponentInstance,
+  mergeExtensionManifest,
+  parseExtensionManifest,
+  starterProjects
+} from "@abl/catalog";
 import { generateSketch } from "@abl/codegen";
 import BlocklyWorkspace from "./BlocklyWorkspace";
 import { agentHealth, agentRpc, openAgentEvents } from "./agentClient";
@@ -70,24 +78,24 @@ function cloneProject(project: ProjectDocument): ProjectDocument {
   return cloned;
 }
 
-function byCategory(category: ComponentDefinition["category"]) {
+function byCategory(components: ComponentDefinition[], category: ComponentDefinition["category"]) {
   return components.filter((component) => component.category === category);
 }
 
-function componentDefinition(instance: ComponentInstance) {
+function componentDefinition(instance: ComponentInstance, components: ComponentDefinition[]) {
   return components.find((component) => component.id === instance.componentId);
 }
 
-function boardName(boardId: string) {
-  return boards.find((board) => board.id === boardId)?.name ?? boardId;
+function boardName(boardId: string, catalog: Catalog) {
+  return catalog.boards.find((board) => board.id === boardId)?.name ?? boardId;
 }
 
-function libraryNames(project: ProjectDocument) {
+function libraryNames(project: ProjectDocument, catalog: Catalog) {
   return generateSketch(project, catalog).libraries.map((library) => library.installName ?? library.name);
 }
 
-function targetLabel(boardId: string, fqbn: string) {
-  return fqbn.trim() || boards.find((board) => board.id === boardId)?.fqbn || boardId;
+function targetLabel(boardId: string, fqbn: string, catalog: Catalog) {
+  return fqbn.trim() || catalog.boards.find((board) => board.id === boardId)?.fqbn || boardId;
 }
 
 function flattenPorts(data: unknown): DetectedPort[] {
@@ -220,8 +228,8 @@ function describeStep(step: ProgramStep): string {
   }
 }
 
-function learningPreview(project: ProjectDocument, language: Exclude<CodeView, "cpp">): string {
-  const board = boardName(project.boardId);
+function learningPreview(project: ProjectDocument, language: Exclude<CodeView, "cpp">, catalog: Catalog): string {
+  const board = boardName(project.boardId, catalog);
   const steps = project.program.map((step) =>
     describeStep(step)
       .toLowerCase()
@@ -297,6 +305,8 @@ const starterCards: StarterCard[] = [
 ];
 
 export default function App() {
+  const [activeCatalog, setActiveCatalog] = useState<Catalog>(() => defaultCatalog);
+  const [extensionPacks, setExtensionPacks] = useState<Array<{ id: string; name: string; version: string }>>([]);
   const [project, setProject] = useState<ProjectDocument>(() => cloneProject(starterProjects.blink));
   const [mode, setMode] = useState<Mode>("blocks");
   const [codeView, setCodeView] = useState<CodeView>("cpp");
@@ -306,7 +316,7 @@ export default function App() {
   const [agentLog, setAgentLog] = useState<string[]>(["Agent not checked yet."]);
   const [ports, setPorts] = useState<DetectedPort[]>([]);
   const [selectedPort, setSelectedPort] = useState("");
-  const [selectedFqbn, setSelectedFqbn] = useState(boards[0]?.fqbn ?? "");
+  const [selectedFqbn, setSelectedFqbn] = useState(defaultBoards[0]?.fqbn ?? "");
   const [boardSearch, setBoardSearch] = useState("");
   const [boardTargets, setBoardTargets] = useState<BoardTarget[]>([]);
   const [serialOpen, setSerialOpen] = useState(false);
@@ -314,34 +324,35 @@ export default function App() {
   const [componentSearch, setComponentSearch] = useState("");
   const [missionProgress, setMissionProgress] = useState<Record<string, boolean>>(loadMissionProgress);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const extensionInputRef = useRef<HTMLInputElement | null>(null);
 
-  const generated = useMemo(() => generateSketch(project, catalog), [project]);
-  const editorCode = codeView === "cpp" ? generated.code : learningPreview(project, codeView);
+  const generated = useMemo(() => generateSketch(project, activeCatalog), [project, activeCatalog]);
+  const editorCode = codeView === "cpp" ? generated.code : learningPreview(project, codeView, activeCatalog);
   const editorLanguage = codeView === "cpp" ? "cpp" : codeView;
-  const selectedBoard = boards.find((board) => board.id === project.boardId) ?? boards[0];
-  const effectiveFqbn = targetLabel(project.boardId, selectedFqbn);
-  const externalLibraries = libraryNames(project);
-  const wiringDiagnostics = useMemo(() => collectWiringDiagnostics(project, selectedBoard), [project, selectedBoard]);
+  const selectedBoard = activeCatalog.boards.find((board) => board.id === project.boardId) ?? activeCatalog.boards[0];
+  const effectiveFqbn = targetLabel(project.boardId, selectedFqbn, activeCatalog);
+  const externalLibraries = libraryNames(project, activeCatalog);
+  const wiringDiagnostics = useMemo(() => collectWiringDiagnostics(project, selectedBoard, activeCatalog.components), [project, selectedBoard, activeCatalog.components]);
   const criticalWiringCount = wiringDiagnostics.filter((diagnostic) => diagnostic.severity !== "tip").length;
-  const completedMissionCount = lessons.filter((lesson) => missionProgress[lesson.id]).length;
-  const nextMission = lessons.find((lesson) => !missionProgress[lesson.id]) ?? lessons[0];
+  const completedMissionCount = activeCatalog.lessons.filter((lesson) => missionProgress[lesson.id]).length;
+  const nextMission = activeCatalog.lessons.find((lesson) => !missionProgress[lesson.id]) ?? activeCatalog.lessons[0];
   const visibleComponents = useMemo(() => {
     const query = componentSearch.trim().toLowerCase();
-    const pool = query ? components : byCategory(selectedCategory);
+    const pool = query ? activeCatalog.components : byCategory(activeCatalog.components, selectedCategory);
     if (!query) return pool;
     return pool.filter((component) =>
       [component.name, component.description, component.category, component.id].join(" ").toLowerCase().includes(query)
     );
-  }, [componentSearch, selectedCategory]);
+  }, [activeCatalog.components, componentSearch, selectedCategory]);
 
   const updateFromBlocks = useCallback((program: ProgramStep[], blocksXml: string) => {
     setProject((current) => ({
       ...current,
       program,
       blocksXml,
-      generatedSketch: generateSketch({ ...current, program, blocksXml }, catalog).code
+      generatedSketch: generateSketch({ ...current, program, blocksXml }, activeCatalog).code
     }));
-  }, []);
+  }, [activeCatalog]);
 
   useEffect(() => {
     agentHealth().then(async (ok) => {
@@ -498,7 +509,7 @@ export default function App() {
 
   async function exportWokwiProject() {
     const zip = new JSZip();
-    const unsupported = unsupportedWokwiComponents(project);
+    const unsupported = unsupportedWokwiComponents(project, activeCatalog.components);
     zip.file("sketch.ino", generated.code);
     zip.file("diagram.json", JSON.stringify(createWokwiDiagram(project), null, 2));
     const libraries = externalLibraries;
@@ -527,6 +538,35 @@ export default function App() {
     const contents = await file.text();
     const parsed = JSON.parse(contents) as ProjectDocument;
     loadProject(parsed);
+  }
+
+  async function importExtensionPack(file: File) {
+    try {
+      const result = parseExtensionManifest(JSON.parse(await file.text()));
+      if (!result.manifest) {
+        setAgentLog((current) => [`Hardware pack import failed: ${result.errors.join(" ")}`, ...current]);
+        return;
+      }
+      const manifest = result.manifest;
+
+      let warnings: string[] = [];
+      setActiveCatalog((current) => {
+        const merged = mergeExtensionManifest(current, manifest);
+        warnings = merged.warnings;
+        return merged.catalog;
+      });
+      setExtensionPacks((current) => [
+        ...current.filter((pack) => pack.id !== manifest.id),
+        { id: manifest.id, name: manifest.name, version: manifest.version }
+      ]);
+      setAgentLog((current) => [
+        `Imported hardware pack ${manifest.name} (${manifest.components?.length ?? 0} component${manifest.components?.length === 1 ? "" : "s"}).`,
+        ...warnings,
+        ...current
+      ]);
+    } catch (error) {
+      setAgentLog((current) => [`Hardware pack import failed: ${error instanceof Error ? error.message : "invalid JSON"}`, ...current]);
+    }
   }
 
   return (
@@ -564,10 +604,10 @@ export default function App() {
             onChange={(event) => {
               const boardId = event.target.value;
               setProject((current) => ({ ...current, boardId }));
-              setSelectedFqbn(boards.find((board) => board.id === boardId)?.fqbn ?? "");
+              setSelectedFqbn(activeCatalog.boards.find((board) => board.id === boardId)?.fqbn ?? "");
             }}
           >
-            {boards.map((board) => (
+            {activeCatalog.boards.map((board) => (
               <option key={board.id} value={board.id}>
                 {board.name}
               </option>
@@ -585,6 +625,9 @@ export default function App() {
           <button title="Download Wokwi project" onClick={() => void exportWokwiProject()}>
             <Globe2 size={18} />
           </button>
+          <button title="Import hardware pack" onClick={() => extensionInputRef.current?.click()}>
+            <PackagePlus size={18} />
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -596,13 +639,24 @@ export default function App() {
               event.currentTarget.value = "";
             }}
           />
+          <input
+            ref={extensionInputRef}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importExtensionPack(file);
+              event.currentTarget.value = "";
+            }}
+          />
         </div>
       </header>
 
       <section className="status-strip">
         <span>
           <CheckCircle2 size={16} />
-          {boardName(project.boardId)}
+          {boardName(project.boardId, activeCatalog)}
         </span>
         <span>
           <Globe2 size={16} />
@@ -619,6 +673,10 @@ export default function App() {
         <span className={criticalWiringCount > 0 ? "warning" : "online"}>
           {criticalWiringCount > 0 ? <AlertTriangle size={16} /> : <Sparkles size={16} />}
           {criticalWiringCount > 0 ? `${criticalWiringCount} wiring note${criticalWiringCount === 1 ? "" : "s"}` : "Wiring clear"}
+        </span>
+        <span>
+          <PackagePlus size={16} />
+          {extensionPacks.length === 0 ? "Built-in pack" : `${extensionPacks.length + 1} packs`}
         </span>
         {generated.warnings.map((warning) => (
           <span className="warning" key={warning}>
@@ -707,7 +765,7 @@ export default function App() {
             </div>
             <div className="component-list">
               {project.components.map((instance) => {
-                const definition = componentDefinition(instance);
+                const definition = componentDefinition(instance, activeCatalog.components);
                 return (
                   <div className="component-row" key={instance.id}>
                     <div>
@@ -738,6 +796,7 @@ export default function App() {
           {mode === "blocks" && (
             <BlocklyWorkspace
               components={project.components}
+              componentDefinitions={activeCatalog.components}
               xml={project.blocksXml ?? projectToBlocklyXml(project)}
               reloadKey={reloadKey}
               onChange={updateFromBlocks}
@@ -779,11 +838,11 @@ export default function App() {
                 <div>
                   <span>Mission path</span>
                   <strong>
-                    {completedMissionCount}/{lessons.length} complete
+                    {completedMissionCount}/{activeCatalog.lessons.length} complete
                   </strong>
                 </div>
                 <div className="mission-progress" aria-label="Mission progress">
-                  <span style={{ width: `${(completedMissionCount / Math.max(lessons.length, 1)) * 100}%` }} />
+                  <span style={{ width: `${(completedMissionCount / Math.max(activeCatalog.lessons.length, 1)) * 100}%` }} />
                 </div>
                 <div className="mission-actions">
                   <button onClick={() => nextMission && loadProject({ ...nextMission.starterProject, lessonId: nextMission.id })}>
@@ -798,7 +857,7 @@ export default function App() {
               </div>
 
               <div className="mission-track">
-                {lessons.map((lesson, index) => {
+                {activeCatalog.lessons.map((lesson, index) => {
                   const complete = Boolean(missionProgress[lesson.id]);
                   const active = project.lessonId === lesson.id;
                   return (
@@ -858,7 +917,7 @@ export default function App() {
               )}
             </div>
             {project.components.map((instance) => {
-              const definition = componentDefinition(instance);
+              const definition = componentDefinition(instance, activeCatalog.components);
               return (
                 <div className="wiring-block" key={instance.id}>
                   <strong>{instance.label}</strong>

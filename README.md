@@ -7,6 +7,7 @@ Open-source Arduino block coding, inspired by the friendliness of LEGO SPIKE and
 - React + Vite web app with Blockly, live Arduino C++ output, lessons, wiring hints, and project save/load.
 - Node local agent wrapping `arduino-cli` for board detection, all Arduino CLI FQBN targets, library/core install, compile, upload, and serial monitor.
 - Shared TypeScript packages for block-pack schemas, the V1 hardware catalog, and Arduino C++ generation.
+- Runtime JSON hardware-pack import for community sensors, boards, lessons, wiring hints, and Arduino C++ snippets.
 - GitHub Pages deployment workflow for the public web app.
 
 ## Why this should become better than the current options
@@ -55,6 +56,6 @@ npm run build
 
 ## Open source
 
-Arduino Blocks Lab is released under the MIT License. Contributions can add new block packs through the extension format in `docs/extension-format.md`.
+Arduino Blocks Lab is released under the MIT License. Contributions can add new block packs through the extension format in `docs/extension-format.md`; a starter example lives in `examples/extensions/soil-moisture-pack.json`.
 
 See `ROADMAP.md` and `CONTRIBUTING.md` for the next build targets.

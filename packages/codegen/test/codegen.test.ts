@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { ComponentInstance, ProjectDocument, ProgramStep } from "@abl/block-schema";
-import { catalog, components, createComponentInstance, starterProjects } from "@abl/catalog";
+import { catalog, components, createComponentInstance, mergeExtensionManifest, parseExtensionManifest, starterProjects } from "@abl/catalog";
 import { collectLibraries, generateSketch } from "../src";
 
 function projectFor(componentIds: string[], step: (instances: Record<string, ComponentInstance>) => ProgramStep): ProjectDocument {
@@ -92,5 +93,16 @@ describe("generateSketch", () => {
       const project = projectFor(testCase.components, testCase.step);
       expect(generateSketch(project, catalog).code).toContain(testCase.expected);
     }
+  });
+
+  it("generates Arduino C++ for an imported extension-pack lesson", () => {
+    const sample = JSON.parse(readFileSync(new URL("../../../examples/extensions/soil-moisture-pack.json", import.meta.url), "utf8"));
+    const parsed = parseExtensionManifest(sample);
+    const merged = mergeExtensionManifest(catalog, parsed.manifest!);
+    const lesson = merged.catalog.lessons.find((candidate) => candidate.id === "lesson-soil-moisture");
+
+    expect(parsed.errors).toEqual([]);
+    expect(lesson).toBeDefined();
+    expect(generateSketch(lesson!.starterProject, merged.catalog).code).toContain("analogRead(A1)");
   });
 });
