@@ -1486,7 +1486,7 @@ export default function App() {
             </div>
           )}
 
-          {mode === "circuit" && <CircuitStudioPanel model={circuitStudio} />}
+          {mode === "circuit" && <CircuitStudioPanel model={circuitStudio} onExportWokwiProject={() => void exportWokwiProject()} />}
 
           {mode === "lessons" && (
             <div className="lessons-panel mission-panel">

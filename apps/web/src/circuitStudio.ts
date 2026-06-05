@@ -1,6 +1,7 @@
 import type { BoardDefinition, ComponentDefinition, ProgramStep, ProjectDocument } from "@abl/block-schema";
 import type { WiringDiagnostic } from "./wiringDiagnostics";
 import type { WiringCanvasConnection, WiringCanvasModel, WiringCanvasPinKind, WiringCanvasStatus } from "./wiringCanvas";
+import { unsupportedWokwiComponents } from "./wokwiExport";
 
 export type CircuitStudioStepState = "done" | "next" | "warning" | "blocked";
 export type CircuitStudioEventTone = "output" | "input" | "motion" | "display" | "serial" | "wait";
@@ -119,6 +120,26 @@ export type CircuitStudioBenchTest = {
   readings: CircuitStudioBenchReading[];
 };
 
+export type CircuitStudioSimulatorTone = "ready" | "partial" | "blocked";
+
+export type CircuitStudioSimulatorItem = {
+  id: string;
+  tone: CircuitStudioSimulatorTone;
+  title: string;
+  detail: string;
+};
+
+export type CircuitStudioSimulatorPlan = {
+  tone: CircuitStudioSimulatorTone;
+  title: string;
+  detail: string;
+  coveragePercent: number;
+  supportedParts: number;
+  unsupportedParts: string[];
+  virtualTests: number;
+  items: CircuitStudioSimulatorItem[];
+};
+
 export type CircuitStudioModel = {
   boardName: string;
   projectName: string;
@@ -127,6 +148,7 @@ export type CircuitStudioModel = {
   steps: CircuitStudioStep[];
   events: CircuitStudioEvent[];
   benchTests: CircuitStudioBenchTest[];
+  simulatorPlan: CircuitStudioSimulatorPlan;
   stats: {
     components: number;
     wires: number;
@@ -900,9 +922,112 @@ function createBenchTests(project: ProjectDocument, connections: WiringCanvasCon
     .slice(0, 6);
 }
 
+function simulatorCoveragePercent(project: ProjectDocument, supportedParts: number, benchTests: CircuitStudioBenchTest[]) {
+  if (project.components.length === 0 && project.program.length === 0) return 0;
+  const partCoverage = project.components.length === 0 ? 1 : supportedParts / project.components.length;
+  const behaviorSteps = project.program.filter((step) => step.kind !== "delay").length;
+  const behaviorCoverage = behaviorSteps === 0 ? 0 : Math.min(1, benchTests.length / behaviorSteps);
+  return Math.round(((partCoverage + behaviorCoverage) / 2) * 100);
+}
+
+function createSimulatorPlan(input: CircuitStudioInput, benchTests: CircuitStudioBenchTest[]): CircuitStudioSimulatorPlan {
+  const unsupportedParts = unsupportedWokwiComponents(input.project, input.definitions);
+  const supportedParts = Math.max(0, input.project.components.length - unsupportedParts.length);
+  const errors = input.wiringDiagnostics.filter((diagnostic) => diagnostic.severity === "error");
+  const warnings = input.wiringDiagnostics.filter((diagnostic) => diagnostic.severity === "warning");
+  const hasHardware = input.project.components.length > 0;
+  const hasBehavior = input.project.program.length > 0;
+  const coveragePercent = simulatorCoveragePercent(input.project, supportedParts, benchTests);
+  const items: CircuitStudioSimulatorItem[] = [];
+
+  if (errors.length > 0) {
+    items.push({
+      id: "fix-wiring",
+      tone: "blocked",
+      title: "Fix wiring before simulation",
+      detail: `${errors.length} wiring error${errors.length === 1 ? "" : "s"} can make the virtual test misleading.`
+    });
+  }
+
+  if (supportedParts > 0) {
+    items.push({
+      id: "wokwi-export",
+      tone: unsupportedParts.length > 0 ? "partial" : "ready",
+      title: unsupportedParts.length > 0 ? "Export the supported parts" : "Wokwi package is ready",
+      detail:
+        unsupportedParts.length > 0
+          ? `${supportedParts} part${supportedParts === 1 ? "" : "s"} can be exported now; add ${unsupportedParts.join(", ")} manually in Wokwi.`
+          : "Download the Wokwi project to test the sketch and diagram before wiring the real board."
+    });
+  } else if (hasHardware) {
+    items.push({
+      id: "manual-simulator",
+      tone: "partial",
+      title: "Manual simulator setup needed",
+      detail: `Add ${unsupportedParts.join(", ")} manually in Wokwi, then paste the generated Arduino C++.`
+    });
+  }
+
+  if (benchTests.length > 0) {
+    items.push({
+      id: "bench-tests",
+      tone: warnings.length > 0 ? "partial" : "ready",
+      title: "Run the bench tests",
+      detail: `${benchTests.length} virtual check${benchTests.length === 1 ? "" : "s"} can be tried here before upload.`
+    });
+  } else if (hasBehavior) {
+    items.push({
+      id: "bench-gap",
+      tone: "partial",
+      title: "Code preview only",
+      detail: "This sketch can be exported, but the current blocks do not have an interactive bench control yet."
+    });
+  } else {
+    items.push({
+      id: "add-code",
+      tone: "partial",
+      title: "Add code to simulate behavior",
+      detail: "Place behavior blocks so Circuit Studio can show expected sensor, output, or serial readings."
+    });
+  }
+
+  if (!hasHardware) {
+    items.unshift({
+      id: "add-hardware",
+      tone: "partial",
+      title: "Add parts to plan a circuit",
+      detail: "Choose a starter project or add hardware before opening a virtual simulator."
+    });
+  }
+
+  const tone: CircuitStudioSimulatorTone =
+    errors.length > 0
+      ? "blocked"
+      : !hasHardware || !hasBehavior || unsupportedParts.length > 0 || warnings.length > 0 || benchTests.length === 0
+        ? "partial"
+        : "ready";
+
+  return {
+    tone,
+    title: tone === "ready" ? "Ready to simulate" : tone === "blocked" ? "Fix before simulating" : "Partial simulator plan",
+    detail:
+      tone === "ready"
+        ? "The wiring, Wokwi export, and bench checks line up for a virtual test."
+        : tone === "blocked"
+          ? "Repair the circuit checks first so the simulator matches the real build."
+          : "Some pieces are ready now; review the notes before trusting the virtual result.",
+    coveragePercent,
+    supportedParts,
+    unsupportedParts,
+    virtualTests: benchTests.length,
+    items
+  };
+}
+
 export function createCircuitStudioModel(input: CircuitStudioInput): CircuitStudioModel {
   const placements = createPlacements(input.project, input.definitions);
   const wires = createWires(input.wiringCanvas.connections, placements);
+  const benchTests = createBenchTests(input.project, input.wiringCanvas.connections);
   const powerWires = input.wiringCanvas.connections.filter((connection) => connection.boardPinKind === "power").length;
   const signalWires = input.wiringCanvas.connections.filter((connection) => ["digital", "analog", "bus"].includes(connection.boardPinKind)).length;
   const errors = input.wiringDiagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
@@ -915,7 +1040,8 @@ export function createCircuitStudioModel(input: CircuitStudioInput): CircuitStud
     wires,
     steps: createSteps(input),
     events: createEvents(input.project, input.wiringCanvas.connections),
-    benchTests: createBenchTests(input.project, input.wiringCanvas.connections),
+    benchTests,
+    simulatorPlan: createSimulatorPlan(input, benchTests),
     stats: {
       components: input.project.components.length,
       wires: input.wiringCanvas.connections.length,

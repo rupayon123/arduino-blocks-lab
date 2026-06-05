@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Cpu, RadioTower, Sparkles, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Cpu, Globe2, RadioTower, Sparkles, Zap } from "lucide-react";
 import {
   defaultBenchControlValues,
   simulateBenchReadings,
@@ -10,11 +10,13 @@ import {
   type CircuitStudioBenchTestTone,
   type CircuitStudioEventTone,
   type CircuitStudioModel,
+  type CircuitStudioSimulatorTone,
   type CircuitStudioStepState
 } from "./circuitStudio";
 
 type Props = {
   model: CircuitStudioModel;
+  onExportWokwiProject?: () => void;
 };
 
 function stepIcon(state: CircuitStudioStepState) {
@@ -35,6 +37,12 @@ function benchIcon(tone: CircuitStudioBenchTestTone) {
   if (tone === "input") return <Cpu size={15} />;
   if (tone === "motion") return <Sparkles size={15} />;
   return <Zap size={15} />;
+}
+
+function simulatorIcon(tone: CircuitStudioSimulatorTone) {
+  if (tone === "ready") return <CheckCircle2 size={15} />;
+  if (tone === "blocked") return <AlertTriangle size={15} />;
+  return <Globe2 size={15} />;
 }
 
 function wirePath(wire: CircuitStudioModel["wires"][number]) {
@@ -143,7 +151,7 @@ function BenchReadout({ reading }: { reading: CircuitStudioBenchReading }) {
   );
 }
 
-export default function CircuitStudioPanel({ model }: Props) {
+export default function CircuitStudioPanel({ model, onExportWokwiProject }: Props) {
   const [controlState, setControlState] = useState<BenchControlState>({});
   const readyLabel =
     model.stats.errors > 0
@@ -223,6 +231,54 @@ export default function CircuitStudioPanel({ model }: Props) {
         </section>
 
         <aside className="circuit-guidance">
+          <section className={`circuit-card simulator-card ${model.simulatorPlan.tone}`}>
+            <div className="circuit-card-heading">
+              <strong>Simulator Readiness</strong>
+              <span>{model.simulatorPlan.coveragePercent}% covered</span>
+            </div>
+            <div className="simulator-summary">
+              <span>{simulatorIcon(model.simulatorPlan.tone)}</span>
+              <div>
+                <strong>{model.simulatorPlan.title}</strong>
+                <p>{model.simulatorPlan.detail}</p>
+              </div>
+              {onExportWokwiProject && (
+                <button disabled={model.stats.components === 0} onClick={onExportWokwiProject}>
+                  <Globe2 size={14} />
+                  Export sim
+                </button>
+              )}
+            </div>
+            <div className="simulator-meter" aria-label="Simulator coverage">
+              <span style={{ width: `${model.simulatorPlan.coveragePercent}%` }} />
+            </div>
+            <div className="simulator-stats">
+              <span>
+                <strong>{model.simulatorPlan.supportedParts}</strong>
+                exportable
+              </span>
+              <span>
+                <strong>{model.simulatorPlan.virtualTests}</strong>
+                bench tests
+              </span>
+              <span className={model.simulatorPlan.unsupportedParts.length > 0 ? "warning" : ""}>
+                <strong>{model.simulatorPlan.unsupportedParts.length}</strong>
+                manual
+              </span>
+            </div>
+            <div className="simulator-item-list">
+              {model.simulatorPlan.items.slice(0, 4).map((item) => (
+                <div className={`simulator-item ${item.tone}`} key={item.id}>
+                  {simulatorIcon(item.tone)}
+                  <span>
+                    <strong>{item.title}</strong>
+                    {item.detail}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="circuit-card">
             <div className="circuit-card-heading">
               <strong>Build Check</strong>

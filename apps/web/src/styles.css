@@ -1574,6 +1574,176 @@ html[data-theme="dark"] .breadboard-model {
   font-size: 14px;
 }
 
+.simulator-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--soft-blue) 45%, var(--field)), var(--panel)),
+    var(--panel);
+}
+
+.simulator-card.ready {
+  border-color: color-mix(in srgb, var(--green) 48%, var(--line));
+}
+
+.simulator-card.partial {
+  border-color: color-mix(in srgb, var(--amber) 56%, var(--line));
+}
+
+.simulator-card.blocked {
+  border-color: color-mix(in srgb, var(--coral) 58%, var(--line));
+}
+
+.simulator-summary {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.simulator-summary > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--blue) 48%, var(--line));
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--deep-blue);
+}
+
+.simulator-card.ready .simulator-summary > span {
+  border-color: color-mix(in srgb, var(--green) 52%, var(--line));
+  color: var(--green);
+}
+
+.simulator-card.partial .simulator-summary > span {
+  border-color: color-mix(in srgb, var(--amber) 60%, var(--line));
+  color: var(--amber-line);
+}
+
+.simulator-card.blocked .simulator-summary > span {
+  border-color: color-mix(in srgb, var(--coral) 58%, var(--line));
+  color: var(--coral);
+}
+
+.simulator-summary div {
+  min-width: 0;
+}
+
+.simulator-summary strong {
+  display: block;
+  color: var(--heading);
+  font-size: 13px;
+}
+
+.simulator-summary p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.simulator-summary button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 0 8px;
+  color: var(--heading);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.simulator-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 42%, var(--field));
+}
+
+.simulator-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--deep-blue), var(--green));
+}
+
+.simulator-card.partial .simulator-meter span {
+  background: linear-gradient(90deg, var(--amber), var(--deep-blue));
+}
+
+.simulator-card.blocked .simulator-meter span {
+  background: linear-gradient(90deg, var(--coral), var(--amber));
+}
+
+.simulator-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.simulator-stats span {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 760;
+  text-align: center;
+}
+
+.simulator-stats strong {
+  display: block;
+  color: var(--heading);
+  font-size: 14px;
+}
+
+.simulator-stats .warning strong {
+  color: var(--amber-line);
+}
+
+.simulator-item-list {
+  display: grid;
+  gap: 7px;
+}
+
+.simulator-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.simulator-item svg {
+  margin-top: 1px;
+  color: var(--deep-blue);
+}
+
+.simulator-item.ready svg {
+  color: var(--green);
+}
+
+.simulator-item.partial svg {
+  color: var(--amber-line);
+}
+
+.simulator-item.blocked svg {
+  color: var(--coral);
+}
+
+.simulator-item strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+}
+
 .circuit-step-list,
 .circuit-event-list,
 .circuit-bench-list {

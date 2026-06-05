@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ProjectDocument } from "@abl/block-schema";
 import { boards, catalog, starterProjects } from "@abl/catalog";
 import { collectWiringDiagnostics } from "./wiringDiagnostics";
 import { createWiringCanvasModel } from "./wiringCanvas";
@@ -92,5 +93,40 @@ describe("circuit studio model", () => {
         expect.objectContaining({ label: "Built-in LED", value: "ON" })
       ])
     );
+  });
+
+  it("marks a fully supported starter project ready for simulation", () => {
+    const model = studioFor(starterProjects.blink);
+
+    expect(model.simulatorPlan).toMatchObject({
+      tone: "ready",
+      title: "Ready to simulate",
+      coveragePercent: 100,
+      supportedParts: 1,
+      unsupportedParts: [],
+      virtualTests: 2
+    });
+    expect(model.simulatorPlan.items.some((item) => item.title === "Wokwi package is ready")).toBe(true);
+  });
+
+  it("calls out partial simulator support for unsupported parts", () => {
+    const model = studioFor(starterProjects.dhtDisplay);
+
+    expect(model.simulatorPlan.tone).toBe("partial");
+    expect(model.simulatorPlan.unsupportedParts).toEqual(["LCD 1602 I2C"]);
+    expect(model.simulatorPlan.items.some((item) => item.detail.includes("add LCD 1602 I2C manually"))).toBe(true);
+  });
+
+  it("blocks simulator trust when wiring has errors", () => {
+    const brokenBlink: ProjectDocument = JSON.parse(JSON.stringify(starterProjects.blink));
+    brokenBlink.components[0]!.pins.signal = 99;
+    const model = studioFor(brokenBlink);
+
+    expect(model.simulatorPlan.tone).toBe("blocked");
+    expect(model.simulatorPlan.title).toBe("Fix before simulating");
+    expect(model.simulatorPlan.items[0]).toMatchObject({
+      id: "fix-wiring",
+      tone: "blocked"
+    });
   });
 });
