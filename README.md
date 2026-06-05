@@ -4,7 +4,7 @@ Open-source Arduino block coding, inspired by the friendliness of LEGO SPIKE and
 
 ## What is included
 
-- React + Vite web app with Blockly, live Arduino C++ output, lessons, wiring hints, auto pin planning, shareable project links, upload readiness checks, autosave, and project save/load.
+- React + Vite web app with Blockly, live Arduino C++ output, lessons, project coach checklist, wiring hints, auto pin planning, shareable project links, upload readiness checks, autosave, and project save/load.
 - Node local agent wrapping `arduino-cli` for board detection, all Arduino CLI FQBN targets, library/core install, compile, upload, and serial monitor.
 - Shared TypeScript packages for block-pack schemas, the V1 hardware catalog, and Arduino C++ generation.
 - Persistent JSON hardware-pack import for community sensors, boards, lessons, wiring hints, and Arduino C++ snippets.
@@ -14,6 +14,7 @@ Open-source Arduino block coding, inspired by the friendliness of LEGO SPIKE and
 
 - SPIKE-style friendliness, but for real Arduino hardware and open-source sensor packs.
 - Browser-based project building, with a local agent for real compile/upload instead of export-only sketches.
+- Project coach turns board, hardware, blocks, wiring, code, and upload state into beginner-friendly next steps.
 - Shareable project links let a learner send a complete blocks-and-hardware project without accounts or cloud storage.
 - Board-aware pin assistant can fix duplicate, invalid, analog, and PWM pin choices while showing a live pin usage map.
 - Beginner-safe upload preflight shows the agent, Arduino CLI, board target, USB port, libraries, and wiring state before compile/upload.

@@ -51,6 +51,7 @@ import { collectUploadReadiness, type AgentCliStatus, type UploadChecklistState 
 import { appendSerialLineEnding, commonBaudRates, lineEndingLabel, normalizeBaudRate, type SerialLineEnding } from "./serialConsole";
 import { autoAssignProjectPins, collectBoardPinUsage } from "./pinPlanner";
 import { projectFromShareHash, shareUrlForProject } from "./projectShare";
+import { collectProjectCoach, type CoachStepState } from "./projectCoach";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -379,6 +380,17 @@ export default function App() {
       }),
     [agentOnline, cliStatus, effectiveFqbn, externalLibraries, selectedPort, wiringDiagnostics]
   );
+  const projectCoach = useMemo(
+    () =>
+      collectProjectCoach({
+        project,
+        boardName: boardName(project.boardId, activeCatalog),
+        wiringDiagnostics,
+        generatedWarnings: generated.warnings,
+        uploadReadiness
+      }),
+    [activeCatalog, generated.warnings, project, uploadReadiness, wiringDiagnostics]
+  );
   const readyToMonitor = agentOnline && Boolean(cliStatus?.available) && Boolean(selectedPort.trim());
   const criticalWiringCount = wiringDiagnostics.filter((diagnostic) => diagnostic.severity !== "tip").length;
   const completedMissionCount = activeCatalog.lessons.filter((lesson) => missionProgress[lesson.id]).length;
@@ -621,6 +633,12 @@ export default function App() {
 
   function readinessIcon(state: UploadChecklistState) {
     if (state === "ready") return <CheckCircle2 size={15} />;
+    if (state === "warning" || state === "blocked") return <AlertTriangle size={15} />;
+    return <Sparkles size={15} />;
+  }
+
+  function coachIcon(state: CoachStepState) {
+    if (state === "done") return <CheckCircle2 size={15} />;
     if (state === "warning" || state === "blocked") return <AlertTriangle size={15} />;
     return <Sparkles size={15} />;
   }
@@ -1039,6 +1057,32 @@ export default function App() {
         </section>
 
         <aside className="right-panel">
+          <section className="panel-section coach-panel">
+            <div className="section-heading">
+              <h2>{projectCoach.title}</h2>
+              <span>
+                {projectCoach.doneCount}/{projectCoach.totalCount}
+              </span>
+            </div>
+            <div className="coach-summary">
+              <strong>{projectCoach.detail}</strong>
+              <div className="coach-progress" aria-label="Project coach progress">
+                <span style={{ width: `${projectCoach.progressPercent}%` }} />
+              </div>
+            </div>
+            <div className="coach-steps">
+              {projectCoach.steps.map((step) => (
+                <div className={`coach-step ${step.state}`} key={step.id}>
+                  {coachIcon(step.state)}
+                  <span>
+                    <strong>{step.label}</strong>
+                    {step.detail}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="panel-section wiring">
             <div className="section-heading wiring-heading">
               <h2>Wiring</h2>
