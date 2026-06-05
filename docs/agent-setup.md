@@ -58,6 +58,14 @@ For third-party boards, install or configure their Arduino CLI package index fir
 
 The Board panel in the web app shows an upload readiness checklist before compile/upload. It checks the local agent, Arduino CLI, FQBN target, USB port, required libraries, and wiring diagnostics so beginners can fix setup issues before seeing raw compiler output.
 
+The same panel includes Connection Doctor. It watches the current setup state and recent compile/upload messages, then turns common failures into a likely cause and a next action:
+
+- Missing headers or library errors point learners to the Libraries button.
+- Invalid FQBN or missing core errors point learners back to board target search.
+- USB permission, access denied, or busy-port errors point learners to port setup help.
+- `avrdude`, sync, timeout, or no-device upload errors point learners to board target, port, cable, and reset checks.
+- Generic compile errors point learners to the Arduino C++ view so the generated sketch stays visible.
+
 The same panel also includes a serial console. Choose a baud rate, open Monitor, then send commands with no ending, newline, carriage return, or both NL + CR. The agent passes the baud rate to Arduino CLI monitor with `--config baudrate=<value>`.
 
 ## Troubleshooting
@@ -67,3 +75,4 @@ The same panel also includes a serial console. Choose a baud rate, open Monitor,
 - If a board is not detected, try another USB cable and confirm the board appears in Arduino IDE or `arduino-cli board list`.
 - If upload fails on Linux, check serial permissions.
 - If a library fails to install, confirm the library name is available through Arduino Library Manager.
+- If Connection Doctor shows an `avrdude` sync issue, confirm the board target and port match the actual board, reconnect USB, then try reset right before upload.

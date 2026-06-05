@@ -72,6 +72,7 @@ import IconBlocksPanel from "./IconBlocksPanel";
 import { createProjectIdeaMatches, type ProjectIdea } from "./ideaBuilder";
 import { collectDeviceWorkflow, type DeviceWorkflowAction, type DeviceWorkflowRunState, type DeviceWorkflowStepState } from "./deviceWorkflow";
 import { agentSetupDocsUrl, agentSetupPlatforms, createAgentSetupScript, getAgentSetupSteps, type AgentSetupPlatform } from "./agentSetup";
+import { collectConnectionDoctor, type ConnectionDoctorAction, type ConnectionDoctorSeverity } from "./connectionDoctor";
 
 type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -494,6 +495,24 @@ export default function App() {
       }),
     [agentOnline, cliStatus, compileState, effectiveFqbn, externalLibraries, librariesReady, selectedPort, serialOpen, uploadReadiness, uploadState, wiringDiagnostics]
   );
+  const connectionDoctor = useMemo(
+    () =>
+      collectConnectionDoctor({
+        agentOnline,
+        cliStatus,
+        fqbn: effectiveFqbn,
+        selectedPort,
+        libraries: externalLibraries,
+        librariesReady,
+        uploadReadiness,
+        compileState,
+        uploadState,
+        serialOpen,
+        wiringDiagnostics,
+        recentMessages: agentLog
+      }),
+    [agentLog, agentOnline, cliStatus, compileState, effectiveFqbn, externalLibraries, librariesReady, selectedPort, serialOpen, uploadReadiness, uploadState, wiringDiagnostics]
+  );
   const projectCoach = useMemo(
     () =>
       collectProjectCoach({
@@ -885,6 +904,12 @@ export default function App() {
     return <Sparkles size={15} />;
   }
 
+  function doctorIcon(severity: ConnectionDoctorSeverity) {
+    if (severity === "ready") return <CheckCircle2 size={16} />;
+    if (severity === "blocked" || severity === "warning") return <AlertTriangle size={16} />;
+    return <Sparkles size={16} />;
+  }
+
   function workflowActionDisabled(action: DeviceWorkflowAction) {
     if (compileState === "running" || uploadState === "running") return true;
     if (action === "none") return true;
@@ -905,6 +930,24 @@ export default function App() {
     if (action === "compile") return void compileSketch();
     if (action === "upload") return void uploadSketch();
     if (action === "monitor") return void toggleSerialMonitor();
+  }
+
+  function doctorActionDisabled(action: ConnectionDoctorAction) {
+    if (action === "open-setup" || action === "open-code") return false;
+    return workflowActionDisabled(action);
+  }
+
+  function runDoctorAction(action: ConnectionDoctorAction) {
+    if (action === "open-setup") {
+      setAgentSetupOpen(true);
+      return;
+    }
+    if (action === "open-code") {
+      setMode("code");
+      setCodeView("cpp");
+      return;
+    }
+    return runWorkflowAction(action);
   }
 
   async function copyAgentSetupText(text: string, label: string) {
@@ -1726,6 +1769,25 @@ export default function App() {
                   </div>
                 ))}
               </div>
+            </div>
+            <div className={`connection-doctor ${connectionDoctor.severity}`}>
+              <div className="connection-doctor-heading">
+                <span className="doctor-badge">{doctorIcon(connectionDoctor.severity)}</span>
+                <span>
+                  <strong>Connection Doctor</strong>
+                  {connectionDoctor.title}
+                </span>
+                <button disabled={doctorActionDisabled(connectionDoctor.action)} onClick={() => runDoctorAction(connectionDoctor.action)}>
+                  <Play size={15} />
+                  {connectionDoctor.actionLabel}
+                </button>
+              </div>
+              <p>{connectionDoctor.summary}</p>
+              <div className="doctor-fix">
+                <Sparkles size={14} />
+                <span>{connectionDoctor.fix}</span>
+              </div>
+              {connectionDoctor.evidence && <code>{connectionDoctor.evidence}</code>}
             </div>
             <label className="fqbn-field">
               <span>Upload target FQBN</span>

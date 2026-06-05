@@ -2638,6 +2638,114 @@ html[data-theme="dark"] .breadboard-model {
   color: var(--coral);
 }
 
+.connection-doctor {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--soft-blue) 56%, var(--field)), var(--field));
+}
+
+.connection-doctor.blocked {
+  border-color: color-mix(in srgb, var(--coral) 46%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--soft-coral) 62%, var(--field)), var(--field));
+}
+
+.connection-doctor.warning {
+  border-color: color-mix(in srgb, var(--amber) 48%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--amber) 16%, var(--field)), var(--field));
+}
+
+.connection-doctor.ready {
+  border-color: color-mix(in srgb, var(--green) 42%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--soft-green) 58%, var(--field)), var(--field));
+}
+
+.connection-doctor-heading {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.doctor-badge {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 2px 0 rgba(17, 121, 186, 0.12);
+}
+
+.connection-doctor.ready .doctor-badge {
+  color: var(--green);
+}
+
+.connection-doctor.warning .doctor-badge,
+.connection-doctor.blocked .doctor-badge {
+  color: var(--coral);
+}
+
+.connection-doctor-heading > span:not(.doctor-badge) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.connection-doctor-heading strong {
+  color: var(--heading);
+  font-size: 13px;
+}
+
+.connection-doctor-heading button {
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.connection-doctor p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.doctor-fix {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.doctor-fix svg {
+  margin-top: 1px;
+  color: var(--deep-blue);
+}
+
+.connection-doctor code {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  border-radius: 8px;
+  background: #0d2e46;
+  color: #def5ff;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .fqbn-field {
   display: grid;
   gap: 6px;
@@ -3244,11 +3352,13 @@ html[data-theme="dark"] .breadboard-model {
   }
 
   .agent-setup-card,
+  .connection-doctor-heading,
   .agent-setup-step {
     grid-template-columns: 1fr;
   }
 
-  .agent-setup-card button {
+  .agent-setup-card button,
+  .connection-doctor-heading button {
     width: 100%;
   }
 
