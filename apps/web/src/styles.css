@@ -269,6 +269,7 @@ button:disabled {
 
 .catalog-list,
 .component-list,
+.pack-list,
 .starter-list,
 .agent-log,
 .lessons-panel {
@@ -278,6 +279,7 @@ button:disabled {
 
 .catalog-list,
 .component-list,
+.pack-list,
 .starter-list {
   display: grid;
   gap: 8px;
@@ -365,6 +367,66 @@ button:disabled {
   padding: 10px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.pack-panel {
+  flex: 0 0 auto;
+}
+
+.pack-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--amber);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.pack-row.builtin {
+  border-left-color: var(--piplup);
+}
+
+.pack-row strong,
+.pack-row span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pack-row strong {
+  font-size: 13px;
+}
+
+.pack-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pack-row button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.pack-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pack-actions button {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
 }
 
 .catalog-row:hover,

@@ -42,6 +42,7 @@ import { agentHealth, agentRpc, openAgentEvents } from "./agentClient";
 import { projectToBlocklyXml } from "./projectXml";
 import { collectWiringDiagnostics } from "./wiringDiagnostics";
 import { createWokwiDiagram, unsupportedWokwiComponents } from "./wokwiExport";
+import { importedPackFromManifest, parseStoredExtensionPacks, serializeExtensionPacks, type ImportedExtensionPack } from "./extensionPacks";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -71,6 +72,7 @@ type AgentCliStatus = {
 };
 
 const missionProgressKey = "abl.missionProgress.v1";
+const extensionPacksKey = "abl.extensionPacks.v1";
 
 function cloneProject(project: ProjectDocument): ProjectDocument {
   const cloned = JSON.parse(JSON.stringify(project)) as ProjectDocument;
@@ -183,6 +185,10 @@ function loadMissionProgress(): Record<string, boolean> {
   } catch {
     return {};
   }
+}
+
+function loadExtensionPacks(): ImportedExtensionPack[] {
+  return parseStoredExtensionPacks(window.localStorage.getItem(extensionPacksKey));
 }
 
 function describeStep(step: ProgramStep): string {
@@ -305,8 +311,7 @@ const starterCards: StarterCard[] = [
 ];
 
 export default function App() {
-  const [activeCatalog, setActiveCatalog] = useState<Catalog>(() => defaultCatalog);
-  const [extensionPacks, setExtensionPacks] = useState<Array<{ id: string; name: string; version: string }>>([]);
+  const [extensionPacks, setExtensionPacks] = useState<ImportedExtensionPack[]>(loadExtensionPacks);
   const [project, setProject] = useState<ProjectDocument>(() => cloneProject(starterProjects.blink));
   const [mode, setMode] = useState<Mode>("blocks");
   const [codeView, setCodeView] = useState<CodeView>("cpp");
@@ -326,6 +331,9 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const extensionInputRef = useRef<HTMLInputElement | null>(null);
 
+  const activeCatalog = useMemo(() => {
+    return extensionPacks.reduce((current, pack) => mergeExtensionManifest(current, pack.manifest).catalog, defaultCatalog);
+  }, [extensionPacks]);
   const generated = useMemo(() => generateSketch(project, activeCatalog), [project, activeCatalog]);
   const editorCode = codeView === "cpp" ? generated.code : learningPreview(project, codeView, activeCatalog);
   const editorLanguage = codeView === "cpp" ? "cpp" : codeView;
@@ -386,10 +394,24 @@ export default function App() {
     window.localStorage.setItem(missionProgressKey, JSON.stringify(missionProgress));
   }, [missionProgress]);
 
+  useEffect(() => {
+    window.localStorage.setItem(extensionPacksKey, serializeExtensionPacks(extensionPacks));
+  }, [extensionPacks]);
+
   function loadProject(nextProject: ProjectDocument) {
     setProject(cloneProject(nextProject));
     setReloadKey(crypto.randomUUID());
     setMode("blocks");
+  }
+
+  function removeExtensionPack(packId: string) {
+    setExtensionPacks((current) => current.filter((pack) => pack.id !== packId));
+    setAgentLog((current) => [`Removed hardware pack ${packId}.`, ...current]);
+  }
+
+  function resetExtensionPacks() {
+    setExtensionPacks([]);
+    setAgentLog((current) => ["Removed all imported hardware packs.", ...current]);
   }
 
   function completeMission(lessonId: string) {
@@ -549,18 +571,14 @@ export default function App() {
       }
       const manifest = result.manifest;
 
-      let warnings: string[] = [];
-      setActiveCatalog((current) => {
-        const merged = mergeExtensionManifest(current, manifest);
-        warnings = merged.warnings;
-        return merged.catalog;
-      });
+      const replacement = extensionPacks.some((pack) => pack.id === manifest.id);
+      const warnings = mergeExtensionManifest(activeCatalog, manifest).warnings;
       setExtensionPacks((current) => [
         ...current.filter((pack) => pack.id !== manifest.id),
-        { id: manifest.id, name: manifest.name, version: manifest.version }
+        importedPackFromManifest(manifest)
       ]);
       setAgentLog((current) => [
-        `Imported hardware pack ${manifest.name} (${manifest.components?.length ?? 0} component${manifest.components?.length === 1 ? "" : "s"}).`,
+        `${replacement ? "Updated" : "Imported"} hardware pack ${manifest.name} (${manifest.components?.length ?? 0} component${manifest.components?.length === 1 ? "" : "s"}).`,
         ...warnings,
         ...current
       ]);
@@ -929,6 +947,44 @@ export default function App() {
                 </div>
               );
             })}
+          </section>
+
+          <section className="panel-section pack-panel">
+            <div className="section-heading">
+              <h2>Packs</h2>
+              <span>{extensionPacks.length + 1}</span>
+            </div>
+            <div className="pack-list">
+              <div className="pack-row builtin">
+                <div>
+                  <strong>Built-in Starter Kit</strong>
+                  <span>Uno, Nano, Mega · {defaultCatalog.components.length} parts</span>
+                </div>
+              </div>
+              {extensionPacks.map((pack) => (
+                <div className="pack-row" key={pack.id}>
+                  <div>
+                    <strong>{pack.name}</strong>
+                    <span>
+                      {pack.version} · {pack.manifest.components?.length ?? 0} parts
+                    </span>
+                  </div>
+                  <button title={`Remove ${pack.name}`} onClick={() => removeExtensionPack(pack.id)}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="pack-actions">
+              <button onClick={() => extensionInputRef.current?.click()}>
+                <PackagePlus size={16} />
+                Import
+              </button>
+              <button disabled={extensionPacks.length === 0} onClick={resetExtensionPacks}>
+                <RotateCcw size={16} />
+                Reset
+              </button>
+            </div>
           </section>
 
           <section className="panel-section agent">
