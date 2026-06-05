@@ -31,7 +31,7 @@ import {
   Upload,
   AlertTriangle
 } from "lucide-react";
-import type { Catalog, ComponentDefinition, ComponentInstance, ProjectDocument, ProgramStep } from "@abl/block-schema";
+import type { Catalog, ComponentDefinition, ComponentInstance, ExtensionManifest, ProjectDocument, ProgramStep } from "@abl/block-schema";
 import {
   boards as defaultBoards,
   catalog as defaultCatalog,
@@ -55,6 +55,7 @@ import { projectFromShareHash, shareUrlForProject } from "./projectShare";
 import { collectProjectCoach, type CoachStepState } from "./projectCoach";
 import { describeProgramStep } from "./programDescriptions";
 import { createBuildGuide } from "./buildGuide";
+import { normalizePackUrl } from "./packUrls";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -314,6 +315,8 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<ComponentDefinition["category"]>("output");
   const [componentSearch, setComponentSearch] = useState("");
   const [missionProgress, setMissionProgress] = useState<Record<string, boolean>>(loadMissionProgress);
+  const [packUrl, setPackUrl] = useState("");
+  const [packUrlBusy, setPackUrlBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const extensionInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -453,6 +456,20 @@ export default function App() {
 
   function resetMissionProgress() {
     setMissionProgress({});
+  }
+
+  function installExtensionManifest(manifest: ExtensionManifest, sourceLabel: string) {
+    const replacement = extensionPacks.some((pack) => pack.id === manifest.id);
+    const warnings = mergeExtensionManifest(activeCatalog, manifest).warnings;
+    setExtensionPacks((current) => [
+      ...current.filter((pack) => pack.id !== manifest.id),
+      importedPackFromManifest(manifest)
+    ]);
+    setAgentLog((current) => [
+      `${replacement ? "Updated" : "Imported"} hardware pack ${manifest.name} from ${sourceLabel} (${manifest.components?.length ?? 0} component${manifest.components?.length === 1 ? "" : "s"}).`,
+      ...warnings,
+      ...current
+    ]);
   }
 
   function addComponent(definition: ComponentDefinition) {
@@ -675,22 +692,43 @@ export default function App() {
         setAgentLog((current) => [`Hardware pack import failed: ${result.errors.join(" ")}`, ...current]);
         return;
       }
-      const manifest = result.manifest;
-
-      const replacement = extensionPacks.some((pack) => pack.id === manifest.id);
-      const warnings = mergeExtensionManifest(activeCatalog, manifest).warnings;
-      setExtensionPacks((current) => [
-        ...current.filter((pack) => pack.id !== manifest.id),
-        importedPackFromManifest(manifest)
-      ]);
-      setAgentLog((current) => [
-        `${replacement ? "Updated" : "Imported"} hardware pack ${manifest.name} (${manifest.components?.length ?? 0} component${manifest.components?.length === 1 ? "" : "s"}).`,
-        ...warnings,
-        ...current
-      ]);
+      installExtensionManifest(result.manifest, file.name);
     } catch (error) {
       setAgentLog((current) => [`Hardware pack import failed: ${error instanceof Error ? error.message : "invalid JSON"}`, ...current]);
     }
+  }
+
+  async function importExtensionPackFromUrl(urlInput = packUrl) {
+    let normalized: string;
+    try {
+      normalized = normalizePackUrl(urlInput, window.location.href);
+    } catch (error) {
+      setAgentLog((current) => [`Hardware pack URL failed: ${error instanceof Error ? error.message : String(error)}`, ...current]);
+      return;
+    }
+
+    setPackUrlBusy(true);
+    try {
+      const response = await fetch(normalized, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const result = parseExtensionManifest(JSON.parse(await response.text()));
+      if (!result.manifest) {
+        setAgentLog((current) => [`Hardware pack URL failed: ${result.errors.join(" ")}`, ...current]);
+        return;
+      }
+      installExtensionManifest(result.manifest, normalized);
+      setPackUrl("");
+    } catch (error) {
+      setAgentLog((current) => [`Hardware pack URL failed: ${error instanceof Error ? error.message : String(error)}`, ...current]);
+    } finally {
+      setPackUrlBusy(false);
+    }
+  }
+
+  function importExamplePack() {
+    const url = new URL("packs/soil-moisture-pack.json", window.location.href).toString();
+    setPackUrl(url);
+    void importExtensionPackFromUrl(url);
   }
 
   return (
@@ -1139,10 +1177,32 @@ export default function App() {
                 </div>
               ))}
             </div>
+            <label className="pack-url-field">
+              <span>Pack URL</span>
+              <div className="pack-url-row">
+                <input
+                  aria-label="Hardware pack URL"
+                  value={packUrl}
+                  disabled={packUrlBusy}
+                  onChange={(event) => setPackUrl(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void importExtensionPackFromUrl();
+                  }}
+                  placeholder="GitHub or raw JSON URL"
+                />
+                <button title="Install pack from URL" disabled={packUrlBusy || !packUrl.trim()} onClick={() => void importExtensionPackFromUrl()}>
+                  <PackagePlus size={15} />
+                </button>
+              </div>
+            </label>
             <div className="pack-actions">
               <button onClick={() => extensionInputRef.current?.click()}>
                 <PackagePlus size={16} />
                 Import
+              </button>
+              <button disabled={packUrlBusy} onClick={importExamplePack}>
+                <Sparkles size={16} />
+                Soil pack
               </button>
               <button disabled={extensionPacks.length === 0} onClick={resetExtensionPacks}>
                 <RotateCcw size={16} />

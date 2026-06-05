@@ -1,0 +1,81 @@
+{
+  "formatVersion": "1.0.0",
+  "id": "community.soil-moisture",
+  "name": "Community Soil Moisture Pack",
+  "version": "0.1.0",
+  "components": [
+    {
+      "id": "soil-moisture",
+      "name": "Soil Moisture Sensor",
+      "category": "sensor",
+      "description": "Analog capacitive soil moisture probe for plant and garden projects.",
+      "defaultPins": {
+        "signal": "A1",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "pinLabels": {
+        "signal": "Analog pin",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "wiring": [
+        {
+          "label": "Signal",
+          "from": "AOUT",
+          "to": "{{pins.signal}}"
+        },
+        {
+          "label": "Power",
+          "from": "VCC",
+          "to": "5V"
+        },
+        {
+          "label": "Ground",
+          "from": "GND",
+          "to": "GND"
+        }
+      ],
+      "runtime": {
+        "setup": ["pinMode({{pins.signal}}, INPUT);"]
+      },
+      "simulatorHints": ["Use a potentiometer in Wokwi to simulate changing soil moisture."]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-soil-moisture",
+      "title": "Plant Probe",
+      "level": "word",
+      "goal": "Read an analog soil moisture probe and print the value to Serial Monitor.",
+      "starterProject": {
+        "schemaVersion": "1.0.0",
+        "name": "Soil Monitor",
+        "boardId": "arduino-uno",
+        "components": [
+          {
+            "id": "soil_1",
+            "componentId": "soil-moisture",
+            "label": "Soil Probe",
+            "pins": {
+              "signal": "A1",
+              "power": "5V",
+              "ground": "GND"
+            }
+          }
+        ],
+        "program": [
+          {
+            "kind": "read-analog-serial",
+            "componentId": "soil_1",
+            "label": "soil"
+          },
+          {
+            "kind": "delay",
+            "ms": 500
+          }
+        ]
+      }
+    }
+  ]
+}
