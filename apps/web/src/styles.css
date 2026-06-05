@@ -2060,7 +2060,7 @@ html[data-theme="dark"] .breadboard-model {
 
 .mission-hero {
   display: grid;
-  grid-template-columns: minmax(160px, auto) 1fr auto;
+  grid-template-columns: minmax(160px, auto) minmax(150px, 1fr) minmax(190px, auto) auto;
   align-items: center;
   gap: 14px;
   padding: 14px;
@@ -2096,6 +2096,40 @@ html[data-theme="dark"] .breadboard-model {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--amber), var(--green), var(--blue));
+}
+
+.mission-pacing {
+  display: grid;
+  grid-template-columns: minmax(74px, auto) minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.mission-pacing span {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  min-height: 46px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--blue) 38%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--field) 72%, var(--soft-blue));
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: none;
+}
+
+.mission-pacing strong {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  color: var(--heading);
+  font-size: 13px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mission-actions,
@@ -2156,6 +2190,21 @@ html[data-theme="dark"] .breadboard-model {
   background: linear-gradient(90deg, var(--soft-green), var(--field) 38%);
 }
 
+.mission-card.ready {
+  border-left-color: var(--amber);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--soft-amber) 56%, var(--field)), var(--field) 42%);
+}
+
+.mission-card.locked {
+  border-left-color: color-mix(in srgb, var(--muted) 50%, var(--line));
+  background: color-mix(in srgb, var(--field) 82%, var(--paper));
+}
+
+.mission-card.locked .mission-copy strong,
+.mission-card.locked .mission-copy p {
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
+}
+
 .mission-node {
   width: 40px;
   height: 40px;
@@ -2171,6 +2220,17 @@ html[data-theme="dark"] .breadboard-model {
 .mission-card.complete .mission-node {
   background: var(--green);
   color: white;
+}
+
+.mission-card.ready .mission-node {
+  background: var(--soft-amber);
+  color: var(--amber-ink);
+}
+
+.mission-card.locked .mission-node {
+  background: color-mix(in srgb, var(--line) 60%, var(--field));
+  color: var(--muted);
+  box-shadow: none;
 }
 
 .mission-copy {
@@ -2192,6 +2252,14 @@ html[data-theme="dark"] .breadboard-model {
   margin-top: 4px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.mission-copy small {
+  display: block;
+  margin-top: 5px;
+  color: var(--amber-line);
+  font-size: 12px;
+  font-weight: 760;
 }
 
 .mission-guide {
@@ -2235,6 +2303,31 @@ html[data-theme="dark"] .breadboard-model {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.4;
+}
+
+.mission-unlock-note {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--amber) 52%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--soft-amber) 72%, var(--paper));
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.mission-unlock-note svg {
+  margin-top: 1px;
+  color: var(--amber-line);
+}
+
+.mission-unlock-note strong {
+  display: block;
+  color: var(--heading);
+  font-size: 13px;
 }
 
 .mission-guide-stats {
@@ -3821,6 +3914,15 @@ html[data-theme="dark"] .breadboard-model {
     grid-template-columns: 1fr;
   }
 
+  .mission-hero {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .mission-pacing {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .circuit-stats {
     justify-content: start;
   }
@@ -3902,6 +4004,10 @@ html[data-theme="dark"] .breadboard-model {
 
   .mission-guide-stats {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .mission-pacing {
+    grid-template-columns: 1fr;
   }
 
   .mission-guide-actions,

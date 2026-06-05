@@ -17,6 +17,7 @@ import {
   Gauge,
   Globe2,
   Library,
+  LockKeyhole,
   Medal,
   Moon,
   PackagePlus,
@@ -75,6 +76,7 @@ import { collectDeviceWorkflow, type DeviceWorkflowAction, type DeviceWorkflowRu
 import { agentSetupDocsUrl, agentSetupPlatforms, createAgentSetupScript, getAgentSetupSteps, type AgentSetupPlatform } from "./agentSetup";
 import { collectConnectionDoctor, type ConnectionDoctorAction, type ConnectionDoctorSeverity } from "./connectionDoctor";
 import { collectWiringRepairPlan, type WiringRepairTone } from "./wiringRepair";
+import { createMissionProgression, missionStatusLabel } from "./missionProgression";
 
 type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -553,10 +555,11 @@ export default function App() {
     kicker: "scratch-style",
     detail: "Build with full Blockly blocks and live Arduino C++."
   };
-  const completedMissionCount = activeCatalog.lessons.filter((lesson) => missionProgress[lesson.id]).length;
-  const nextMission = activeCatalog.lessons.find((lesson) => !missionProgress[lesson.id]) ?? activeCatalog.lessons[0];
+  const missionProgression = useMemo(() => createMissionProgression(activeCatalog.lessons, missionProgress), [activeCatalog.lessons, missionProgress]);
+  const nextMission = missionProgression.recommended?.lesson ?? activeCatalog.lessons[0];
   const focusedLesson =
     activeCatalog.lessons.find((lesson) => lesson.id === (lessonFocusId ?? project.lessonId)) ?? nextMission ?? activeCatalog.lessons[0];
+  const focusedMissionItem = focusedLesson ? missionProgression.items.find((item) => item.lesson.id === focusedLesson.id) : undefined;
   const focusedLessonGuide = useMemo(() => (focusedLesson ? createLessonGuide(focusedLesson, activeCatalog) : undefined), [activeCatalog, focusedLesson]);
   const agentSetupSteps = getAgentSetupSteps(agentSetupPlatform);
   const agentSetupScript = createAgentSetupScript(agentSetupPlatform);
@@ -1494,14 +1497,24 @@ export default function App() {
                 <div>
                   <span>Mission path</span>
                   <strong>
-                    {completedMissionCount}/{activeCatalog.lessons.length} complete
+                    {missionProgression.completedCount}/{missionProgression.totalCount} complete
                   </strong>
                 </div>
                 <div className="mission-progress" aria-label="Mission progress">
-                  <span style={{ width: `${(completedMissionCount / Math.max(activeCatalog.lessons.length, 1)) * 100}%` }} />
+                  <span style={{ width: `${missionProgression.progressPercent}%` }} />
+                </div>
+                <div className="mission-pacing" aria-label="Class pacing">
+                  <span>
+                    <strong>{missionProgression.remainingMinutes}</strong>
+                    min left
+                  </span>
+                  <span>
+                    <strong>{missionProgression.recommended?.lesson.title ?? "Path complete"}</strong>
+                    next mission
+                  </span>
                 </div>
                 <div className="mission-actions">
-                  <button onClick={() => nextMission && launchLesson(nextMission.id)}>
+                  <button disabled={!missionProgression.recommended} onClick={() => missionProgression.recommended && launchLesson(missionProgression.recommended.lesson.id)}>
                     <Play size={16} />
                     Next
                   </button>
@@ -1514,33 +1527,38 @@ export default function App() {
 
               <div className="mission-workbench">
                 <div className="mission-track">
-                  {activeCatalog.lessons.map((lesson, index) => {
-                    const complete = Boolean(missionProgress[lesson.id]);
+                  {missionProgression.items.map((item) => {
+                    const lesson = item.lesson;
+                    const complete = item.status === "complete";
+                    const locked = item.status === "locked";
                     const active = focusedLesson?.id === lesson.id;
                     const loaded = project.lessonId === lesson.id;
                     return (
-                      <div className={`mission-card ${complete ? "complete" : ""} ${active ? "active" : ""}`} key={lesson.id}>
+                      <div className={`mission-card ${item.status} ${active ? "active" : ""}`} key={lesson.id}>
                         <button className="mission-node" onClick={() => setLessonFocusId(lesson.id)} title={`Preview ${lesson.title}`}>
-                          {complete ? <Medal size={20} /> : <span>{index + 1}</span>}
+                          {complete ? <Medal size={20} /> : locked ? <LockKeyhole size={18} /> : <span>{item.index + 1}</span>}
                         </button>
                         <div className="mission-copy">
                           <span>
                             {lessonLevelLabel(lesson.level)}
+                            {" · "}
+                            {missionStatusLabel(item.status)}
                             {loaded ? " · loaded" : ""}
                           </span>
                           <strong>{lesson.title}</strong>
                           <p>{lesson.goal}</p>
+                          {locked && item.lockedBy && <small>Finish {item.lockedBy.title} to unlock.</small>}
                         </div>
                         <div className="mission-card-actions">
-                          <button onClick={() => launchLesson(lesson.id)}>
-                            <Play size={16} />
-                            Launch
+                          <button disabled={locked} onClick={() => launchLesson(lesson.id)}>
+                            {locked ? <LockKeyhole size={16} /> : <Play size={16} />}
+                            {locked ? "Locked" : "Launch"}
                           </button>
                           <button onClick={() => exportLessonBuildGuide(lesson.id)}>
                             <FileText size={16} />
                             Guide
                           </button>
-                          <button disabled={complete} onClick={() => completeMission(lesson.id)}>
+                          <button disabled={complete || locked} onClick={() => completeMission(lesson.id)}>
                             <CheckCircle2 size={16} />
                             {complete ? "Done" : "Mark"}
                           </button>
@@ -1557,6 +1575,15 @@ export default function App() {
                       <strong>{focusedLessonGuide.lesson.title}</strong>
                       <p>{focusedLessonGuide.lesson.goal}</p>
                     </div>
+                    {focusedMissionItem?.status === "locked" && focusedMissionItem.lockedBy && (
+                      <div className="mission-unlock-note">
+                        <LockKeyhole size={16} />
+                        <span>
+                          <strong>Locked in the student path</strong>
+                          Finish {focusedMissionItem.lockedBy.title} before launching this mission.
+                        </span>
+                      </div>
+                    )}
                     <div className="mission-guide-stats">
                       <span>
                         <strong>{focusedLessonGuide.minutes}</strong>
@@ -1576,9 +1603,9 @@ export default function App() {
                       </span>
                     </div>
                     <div className="mission-guide-actions">
-                      <button onClick={() => launchLesson(focusedLessonGuide.lesson.id)}>
-                        <Play size={16} />
-                        Launch
+                      <button disabled={focusedMissionItem?.status === "locked"} onClick={() => launchLesson(focusedLessonGuide.lesson.id)}>
+                        {focusedMissionItem?.status === "locked" ? <LockKeyhole size={16} /> : <Play size={16} />}
+                        {focusedMissionItem?.status === "locked" ? "Locked" : "Launch"}
                       </button>
                       <button onClick={() => exportLessonBuildGuide(focusedLessonGuide.lesson.id)}>
                         <FileText size={16} />

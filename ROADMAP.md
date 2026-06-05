@@ -20,7 +20,7 @@ Arduino Blocks Lab aims to become the easiest serious path from first circuit to
 
 ## Near-Term Priorities
 
-- Guided Mission Map: expand the new lesson guide sheets into a richer project map with unlock paths and classroom pacing.
+- Guided Mission Map: expand sequential unlocks and classroom pacing into richer unit tracks, teacher views, and optional custom paths.
 - Wiring Canvas: expand the new visual wire rows into editable conflict fixes and breadboard previews.
 - Sensor Pack Gallery: expand the new built-in gallery with more tested community packs.
 - Better Upload Bridge: signed agent installers, first-run diagnostics, and clearer browser-to-localhost setup.
