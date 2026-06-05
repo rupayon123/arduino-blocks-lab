@@ -311,6 +311,7 @@ export default function App() {
   const [boardTargets, setBoardTargets] = useState<BoardTarget[]>([]);
   const [serialOpen, setSerialOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ComponentDefinition["category"]>("output");
+  const [componentSearch, setComponentSearch] = useState("");
   const [missionProgress, setMissionProgress] = useState<Record<string, boolean>>(loadMissionProgress);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -324,6 +325,14 @@ export default function App() {
   const criticalWiringCount = wiringDiagnostics.filter((diagnostic) => diagnostic.severity !== "tip").length;
   const completedMissionCount = lessons.filter((lesson) => missionProgress[lesson.id]).length;
   const nextMission = lessons.find((lesson) => !missionProgress[lesson.id]) ?? lessons[0];
+  const visibleComponents = useMemo(() => {
+    const query = componentSearch.trim().toLowerCase();
+    const pool = query ? components : byCategory(selectedCategory);
+    if (!query) return pool;
+    return pool.filter((component) =>
+      [component.name, component.description, component.category, component.id].join(" ").toLowerCase().includes(query)
+    );
+  }, [componentSearch, selectedCategory]);
 
   const updateFromBlocks = useCallback((program: ProgramStep[], blocksXml: string) => {
     setProject((current) => ({
@@ -654,8 +663,17 @@ export default function App() {
           <section className="panel-section">
             <div className="section-heading">
               <h2>Hardware</h2>
-              <span>{project.components.length}</span>
+              <span>{visibleComponents.length}</span>
             </div>
+            <label className="component-search">
+              <Search size={15} />
+              <input
+                aria-label="Search hardware"
+                value={componentSearch}
+                onChange={(event) => setComponentSearch(event.target.value)}
+                placeholder="Search sensors, motors, displays"
+              />
+            </label>
             <div className="category-tabs" role="tablist" aria-label="Hardware categories">
               {(["output", "input", "sensor", "motion", "display", "power", "communication"] as const).map((category) => (
                 <button
@@ -668,12 +686,17 @@ export default function App() {
               ))}
             </div>
             <div className="catalog-list">
-              {byCategory(selectedCategory).map((definition) => (
-                <button className="catalog-row" key={definition.id} onClick={() => addComponent(definition)}>
-                  <span>{definition.name}</span>
-                  <Upload size={16} />
-                </button>
-              ))}
+              {visibleComponents.length === 0 ? (
+                <div className="empty-row">No hardware matches.</div>
+              ) : (
+                visibleComponents.map((definition) => (
+                  <button className="catalog-row" key={definition.id} onClick={() => addComponent(definition)}>
+                    <span>{definition.name}</span>
+                    <small>{definition.category}</small>
+                    <Upload size={16} />
+                  </button>
+                ))
+              )}
             </div>
           </section>
 

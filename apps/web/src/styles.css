@@ -231,6 +231,27 @@ button:disabled {
   padding-bottom: 2px;
 }
 
+.component-search {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--deep-blue);
+}
+
+.component-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
 .category-tabs button {
   height: 30px;
   border-radius: 8px;
@@ -321,8 +342,29 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 0 10px;
   text-align: left;
+}
+
+.catalog-row span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-row small {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.empty-row {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .catalog-row:hover,
