@@ -8,7 +8,7 @@ The simplest path after cloning this repo is:
 npm run agent
 ```
 
-The launcher installs missing workspace packages on first run, checks whether Arduino CLI is available, and starts the localhost helper. Keep that terminal open while using the public web app.
+The launcher installs missing workspace packages on first run, checks whether Arduino CLI is available, and starts the localhost helper. Keep that terminal open while using the public web app. You can also open `http://127.0.0.1:47631/` to see the local helper status page.
 
 ## macOS
 
@@ -72,6 +72,16 @@ The same panel includes Connection Doctor. It watches the current setup state an
 - Generic compile errors point learners to the Arduino C++ view so the generated sketch stays visible.
 
 The same panel also includes a serial console. Choose a baud rate, open Monitor, then send commands with no ending, newline, carriage return, or both NL + CR. The agent passes the baud rate to Arduino CLI monitor with `--config baudrate=<value>`.
+
+## Local Status Page
+
+When the agent is running, `http://127.0.0.1:47631/` shows a friendly status page with:
+
+- the helper port,
+- Arduino CLI readiness,
+- links back to the public web app and setup guide,
+- the health JSON endpoint,
+- the RPC and events endpoints used by the web app.
 
 ## Troubleshooting
 

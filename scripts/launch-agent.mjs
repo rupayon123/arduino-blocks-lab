@@ -180,6 +180,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
 
   if (await agentAlreadyRunning(options.port)) {
     console.log(`Agent is already running at http://127.0.0.1:${options.port}`);
+    console.log(`Status page: http://127.0.0.1:${options.port}/`);
     return 0;
   }
 
@@ -203,7 +204,8 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     console.warn("Workspace dependencies are missing because --skip-install was used.");
   }
 
-  console.log("Starting the localhost agent. Keep this terminal open while uploading.");
+  console.log(`Starting the localhost agent. Status page: http://127.0.0.1:${options.port}/`);
+  console.log("Keep this terminal open while uploading.");
   return run(npm, ["run", "start", "-w", "@abl/agent"], {
     cwd: rootDir,
     env: {

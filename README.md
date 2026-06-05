@@ -53,7 +53,7 @@ brew install arduino-cli
 npm run agent
 ```
 
-The launcher installs missing npm packages on first run, checks for Arduino CLI, and starts the agent. The agent exposes a localhost API only. It lets the hosted web app detect boards, search Arduino CLI board targets, prepare cores and libraries, compile, upload, and open the serial monitor.
+The launcher installs missing npm packages on first run, checks for Arduino CLI, and starts the agent. Open `http://127.0.0.1:47631/` to see the local status page. The agent exposes a localhost API only. It lets the hosted web app detect boards, search Arduino CLI board targets, prepare cores and libraries, compile, upload, and open the serial monitor.
 
 More setup detail is in `docs/agent-setup.md`.
 

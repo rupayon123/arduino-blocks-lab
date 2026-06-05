@@ -9,10 +9,13 @@ import { promisify } from "node:util";
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
 import { boards } from "@abl/catalog";
+import { renderAgentLandingPage } from "./landingPage";
 
 const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.ABL_AGENT_PORT ?? 47631);
 const CLI = process.env.ARDUINO_CLI_PATH ?? "arduino-cli";
+const WEB_APP_URL = process.env.ABL_WEB_APP_URL ?? "https://pisces123.github.io/arduino-blocks-lab/";
+const SETUP_DOCS_URL = "https://github.com/pisces123/arduino-blocks-lab/blob/main/docs/agent-setup.md";
 
 const rpcSchema = z.object({
   method: z.string(),
@@ -233,6 +236,21 @@ async function handleRpc(method: string, params: Record<string, unknown> = {}): 
 
 app.get("/health", (_request, response) => {
   response.json({ ok: true, port: PORT, cli: CLI });
+});
+
+app.get("/", async (_request, response) => {
+  const status = await cliStatus();
+  response.type("html").send(
+    renderAgentLandingPage({
+      port: PORT,
+      cli: status.cli,
+      cliAvailable: status.available,
+      cliDetail: status.available ? "Arduino CLI is answering." : status.error,
+      boardCount: boards.length,
+      webAppUrl: WEB_APP_URL,
+      docsUrl: SETUP_DOCS_URL
+    })
+  );
 });
 
 app.post("/rpc", async (request, response) => {
