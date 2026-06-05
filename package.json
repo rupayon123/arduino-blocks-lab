@@ -29,6 +29,7 @@
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.544.0",
     "monaco-editor": "^0.53.0",
     "react": "^19.1.1",

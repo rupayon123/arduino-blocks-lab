@@ -294,6 +294,36 @@ button:disabled {
   border-left: 5px solid var(--piplup);
 }
 
+.pin-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding-top: 4px;
+}
+
+.pin-grid label {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.pin-grid label span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pin-grid input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 7px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+
 .component-row strong,
 .component-row span {
   display: block;
@@ -721,5 +751,9 @@ button:disabled {
   .left-panel,
   .right-panel {
     min-height: 320px;
+  }
+
+  .pin-grid {
+    grid-template-columns: 1fr;
   }
 }
