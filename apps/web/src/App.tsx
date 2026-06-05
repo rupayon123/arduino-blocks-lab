@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import {
   Cable,
   CheckCircle2,
+  CircuitBoard,
   Code2,
   Cpu,
   Download,
@@ -63,8 +64,10 @@ import { normalizePackUrl } from "./packUrls";
 import { parsePackGallery, resolveGalleryPackUrl, type PackGalleryEntry } from "./packGallery";
 import { createWiringCanvasModel } from "./wiringCanvas";
 import { nextThemePreference, parseThemePreference, type ThemePreference } from "./theme";
+import { createCircuitStudioModel } from "./circuitStudio";
+import CircuitStudioPanel from "./CircuitStudioPanel";
 
-type Mode = "blocks" | "code" | "lessons";
+type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
 type ProjectStyle = "icon" | "word" | "code";
 
@@ -382,6 +385,17 @@ export default function App() {
   const wiringDiagnostics = useMemo(() => collectWiringDiagnostics(project, selectedBoard, activeCatalog.components), [project, selectedBoard, activeCatalog.components]);
   const boardPinUsage = useMemo(() => collectBoardPinUsage(project, selectedBoard, activeCatalog.components), [project, selectedBoard, activeCatalog.components]);
   const wiringCanvas = useMemo(() => createWiringCanvasModel(project, selectedBoard, activeCatalog.components), [project, selectedBoard, activeCatalog.components]);
+  const circuitStudio = useMemo(
+    () =>
+      createCircuitStudioModel({
+        project,
+        board: selectedBoard,
+        definitions: activeCatalog.components,
+        wiringCanvas,
+        wiringDiagnostics
+      }),
+    [activeCatalog.components, project, selectedBoard, wiringCanvas, wiringDiagnostics]
+  );
   const uploadReadiness = useMemo(
     () =>
       collectUploadReadiness({
@@ -873,6 +887,10 @@ export default function App() {
               <Code2 size={18} />
               Arduino C++
             </button>
+            <button className={mode === "circuit" ? "active" : ""} onClick={() => setMode("circuit")}>
+              <CircuitBoard size={18} />
+              Circuit
+            </button>
             <button className={mode === "lessons" ? "active" : ""} onClick={() => setMode("lessons")}>
               <Gauge size={18} />
               Lessons
@@ -1155,6 +1173,8 @@ export default function App() {
               />
             </div>
           )}
+
+          {mode === "circuit" && <CircuitStudioPanel model={circuitStudio} />}
 
           {mode === "lessons" && (
             <div className="lessons-panel mission-panel">

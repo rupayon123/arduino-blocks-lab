@@ -778,6 +778,7 @@ button:disabled {
 
 .blockly-host,
 .code-panel,
+.circuit-panel,
 .lessons-panel {
   height: 100%;
   width: 100%;
@@ -789,6 +790,434 @@ button:disabled {
 
 .code-panel {
   padding: 0;
+}
+
+.circuit-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  overflow: auto;
+}
+
+.circuit-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--field), var(--soft-blue));
+}
+
+.circuit-hero span,
+.circuit-card-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.circuit-hero > div:first-child span {
+  color: var(--deep-blue);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.circuit-hero strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--heading);
+  font-size: 23px;
+  line-height: 1.1;
+}
+
+.circuit-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.circuit-stats span {
+  min-width: 78px;
+  display: grid;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  text-align: center;
+}
+
+.circuit-stats strong {
+  margin: 0;
+  font-size: 15px;
+}
+
+.circuit-stats .ready strong {
+  color: var(--green);
+}
+
+.circuit-stats .warning strong {
+  color: var(--amber-ink);
+}
+
+.circuit-stats .blocked strong {
+  color: var(--coral);
+}
+
+.circuit-workbench {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(310px, 0.75fr);
+  gap: 14px;
+}
+
+.circuit-stage {
+  position: relative;
+  min-height: 455px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--soft-blue) 42%, transparent), transparent 36%),
+    radial-gradient(circle at 72% 24%, color-mix(in srgb, var(--amber) 20%, transparent), transparent 28%),
+    color-mix(in srgb, var(--field) 82%, var(--soft-blue));
+  perspective: 900px;
+}
+
+.circuit-floor {
+  position: absolute;
+  inset: 70px 34px 28px 34px;
+  border: 1px solid color-mix(in srgb, var(--line) 64%, transparent);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(90deg, rgba(20, 168, 224, 0.12) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgba(255, 200, 61, 0.12) 0 1px, transparent 1px 34px),
+    color-mix(in srgb, var(--paper) 76%, transparent);
+  box-shadow: 0 28px 45px rgba(5, 30, 48, 0.12);
+  transform: rotateX(62deg) rotateZ(-2deg);
+  transform-origin: center;
+}
+
+.circuit-wire-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.circuit-wire {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 0.72;
+  stroke-linecap: round;
+  opacity: 0.78;
+  filter: drop-shadow(0 1px 0 rgba(4, 25, 38, 0.18));
+}
+
+.circuit-wire.digital {
+  stroke: var(--blue);
+}
+
+.circuit-wire.analog {
+  stroke: var(--amber);
+}
+
+.circuit-wire.power {
+  stroke: var(--green);
+}
+
+.circuit-wire.bus {
+  stroke: #9f99ff;
+}
+
+.circuit-wire.warning {
+  stroke: var(--amber);
+  stroke-dasharray: 2 1.4;
+}
+
+.circuit-wire.error {
+  stroke: var(--coral);
+  stroke-dasharray: 1.3 1.1;
+}
+
+.arduino-model,
+.breadboard-model,
+.component-model {
+  position: absolute;
+  z-index: 5;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 8px;
+  box-shadow: 0 16px 24px rgba(5, 30, 48, 0.2);
+}
+
+.arduino-model {
+  left: 7%;
+  top: 34%;
+  width: 230px;
+  height: 145px;
+  padding: 18px;
+  color: white;
+  background: linear-gradient(145deg, #039ec4, #087aa4);
+  transform: rotateX(54deg) rotateZ(-9deg);
+  transform-origin: center;
+}
+
+.arduino-model strong {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  max-width: 168px;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.usb-port,
+.power-jack,
+.chip,
+.pin-bank {
+  position: absolute;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.usb-port {
+  left: 14px;
+  top: 18px;
+  width: 38px;
+  height: 28px;
+}
+
+.power-jack {
+  right: 14px;
+  bottom: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+}
+
+.chip {
+  left: 92px;
+  top: 53px;
+  width: 68px;
+  height: 38px;
+  background: #173244;
+}
+
+.pin-bank {
+  left: 62px;
+  width: 142px;
+  height: 12px;
+  background:
+    repeating-linear-gradient(90deg, #203849 0 8px, #f6fbff 8px 13px, #203849 13px 17px);
+}
+
+.pin-bank.top {
+  top: 18px;
+}
+
+.pin-bank.bottom {
+  bottom: 18px;
+}
+
+.breadboard-model {
+  left: 43%;
+  top: 32%;
+  width: 380px;
+  height: 176px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fffefd, #f0f8fc);
+  transform: rotateX(58deg) rotateZ(3deg);
+  transform-origin: center;
+}
+
+html[data-theme="dark"] .breadboard-model {
+  background: linear-gradient(180deg, #e9f6fb, #bfd4df);
+}
+
+.breadboard-model strong {
+  position: absolute;
+  left: 18px;
+  bottom: 12px;
+  color: #173244;
+  font-size: 14px;
+}
+
+.breadboard-model .rail {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  height: 5px;
+  border-radius: 999px;
+}
+
+.breadboard-model .positive {
+  top: 20px;
+  background: #f36c52;
+}
+
+.breadboard-model .negative {
+  bottom: 40px;
+  background: #14a8e0;
+}
+
+.breadboard-dots {
+  position: absolute;
+  inset: 42px 30px 62px 30px;
+  background-image: radial-gradient(circle, rgba(12, 42, 58, 0.34) 0 2px, transparent 2px);
+  background-size: 18px 16px;
+}
+
+.component-model {
+  left: var(--x);
+  top: var(--y);
+  width: 148px;
+  min-height: 70px;
+  display: grid;
+  gap: 3px;
+  padding: 10px 10px 10px 15px;
+  border-left: 6px solid var(--accent);
+  background: var(--paper);
+  transform: rotateX(48deg) rotateZ(-4deg);
+  transform-origin: center;
+}
+
+.component-model > span {
+  width: 28px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.component-model strong,
+.component-model small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.component-model strong {
+  color: var(--heading);
+  font-size: 12px;
+}
+
+.component-model small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.circuit-guidance {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  overflow: auto;
+}
+
+.circuit-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.circuit-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.circuit-card-heading strong {
+  color: var(--heading);
+  font-size: 14px;
+}
+
+.circuit-step-list,
+.circuit-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.circuit-step,
+.circuit-event {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.circuit-step svg,
+.circuit-event svg {
+  margin-top: 1px;
+}
+
+.circuit-step strong,
+.circuit-event strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.circuit-step.done svg {
+  color: var(--green);
+}
+
+.circuit-step.next svg,
+.circuit-event.serial svg {
+  color: var(--deep-blue);
+}
+
+.circuit-step.warning svg,
+.circuit-step.blocked svg {
+  color: var(--coral);
+}
+
+.circuit-event {
+  grid-template-columns: 22px 18px minmax(0, 1fr);
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.circuit-event em {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--soft-blue);
+  color: var(--heading);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.circuit-event.output svg {
+  color: var(--coral);
+}
+
+.circuit-event.input svg {
+  color: var(--green);
+}
+
+.circuit-event.motion svg {
+  color: #9f99ff;
+}
+
+.circuit-event.display svg,
+.circuit-event.wait svg {
+  color: var(--amber);
 }
 
 .code-view-tabs {
@@ -1831,6 +2260,36 @@ button:disabled {
     flex-wrap: wrap;
   }
 
+  .circuit-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .circuit-stage {
+    min-height: 430px;
+  }
+
+  .circuit-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .circuit-stats {
+    justify-content: start;
+  }
+
+  .arduino-model {
+    left: 6%;
+    width: 205px;
+  }
+
+  .breadboard-model {
+    left: 39%;
+    width: 330px;
+  }
+
+  .component-model {
+    width: 132px;
+  }
+
   .status-strip {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -1861,5 +2320,63 @@ button:disabled {
 
   .project-style-cards {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .circuit-panel {
+    padding: 12px;
+  }
+
+  .circuit-stage {
+    min-height: 360px;
+  }
+
+  .circuit-floor {
+    inset: 84px 16px 22px;
+  }
+
+  .arduino-model {
+    left: 5%;
+    top: 40%;
+    width: 158px;
+    height: 108px;
+    padding: 12px;
+  }
+
+  .arduino-model strong {
+    left: 12px;
+    bottom: 12px;
+    font-size: 12px;
+  }
+
+  .chip {
+    left: 64px;
+    top: 42px;
+    width: 50px;
+    height: 28px;
+  }
+
+  .pin-bank {
+    left: 46px;
+    width: 96px;
+  }
+
+  .breadboard-model {
+    left: 38%;
+    top: 40%;
+    width: 220px;
+    height: 116px;
+  }
+
+  .breadboard-dots {
+    inset: 36px 22px 48px;
+    background-size: 14px 13px;
+  }
+
+  .component-model {
+    width: 112px;
+    min-height: 58px;
+    padding: 8px 8px 8px 12px;
   }
 }
