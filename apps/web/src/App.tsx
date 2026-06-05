@@ -43,6 +43,7 @@ import { projectToBlocklyXml } from "./projectXml";
 import { collectWiringDiagnostics } from "./wiringDiagnostics";
 import { createWokwiDiagram, unsupportedWokwiComponents } from "./wokwiExport";
 import { importedPackFromManifest, parseStoredExtensionPacks, serializeExtensionPacks, type ImportedExtensionPack } from "./extensionPacks";
+import { parseStoredProject, serializeProject } from "./projectStorage";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -73,6 +74,7 @@ type AgentCliStatus = {
 
 const missionProgressKey = "abl.missionProgress.v1";
 const extensionPacksKey = "abl.extensionPacks.v1";
+const currentProjectKey = "abl.currentProject.v1";
 
 function cloneProject(project: ProjectDocument): ProjectDocument {
   const cloned = JSON.parse(JSON.stringify(project)) as ProjectDocument;
@@ -189,6 +191,14 @@ function loadMissionProgress(): Record<string, boolean> {
 
 function loadExtensionPacks(): ImportedExtensionPack[] {
   return parseStoredExtensionPacks(window.localStorage.getItem(extensionPacksKey));
+}
+
+function loadCurrentProject(): ProjectDocument | undefined {
+  try {
+    return parseStoredProject(window.localStorage.getItem(currentProjectKey));
+  } catch {
+    return undefined;
+  }
 }
 
 function describeStep(step: ProgramStep): string {
@@ -312,7 +322,8 @@ const starterCards: StarterCard[] = [
 
 export default function App() {
   const [extensionPacks, setExtensionPacks] = useState<ImportedExtensionPack[]>(loadExtensionPacks);
-  const [project, setProject] = useState<ProjectDocument>(() => cloneProject(starterProjects.blink));
+  const [project, setProject] = useState<ProjectDocument>(() => cloneProject(loadCurrentProject() ?? starterProjects.blink));
+  const [projectSavedAt, setProjectSavedAt] = useState<Date | null>(null);
   const [mode, setMode] = useState<Mode>("blocks");
   const [codeView, setCodeView] = useState<CodeView>("cpp");
   const [reloadKey, setReloadKey] = useState(() => crypto.randomUUID());
@@ -397,6 +408,15 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(extensionPacksKey, serializeExtensionPacks(extensionPacks));
   }, [extensionPacks]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(currentProjectKey, serializeProject({ ...project, generatedSketch: generated.code }));
+      setProjectSavedAt(new Date());
+    } catch {
+      setProjectSavedAt(null);
+    }
+  }, [generated.code, project]);
 
   function loadProject(nextProject: ProjectDocument) {
     setProject(cloneProject(nextProject));
@@ -695,6 +715,10 @@ export default function App() {
         <span>
           <PackagePlus size={16} />
           {extensionPacks.length === 0 ? "Built-in pack" : `${extensionPacks.length + 1} packs`}
+        </span>
+        <span>
+          <Save size={16} />
+          {projectSavedAt ? `Autosaved ${projectSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Autosave ready"}
         </span>
         {generated.warnings.map((warning) => (
           <span className="warning" key={warning}>

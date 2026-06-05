@@ -1,6 +1,6 @@
 # Local Agent Setup
 
-The public web app can generate projects by itself, but real USB upload needs the local agent because browsers cannot directly compile arbitrary Arduino sketches and upload them to serial boards.
+The public web app can generate and autosave projects by itself, but real USB upload needs the local agent because browsers cannot directly compile arbitrary Arduino sketches and upload them to serial boards.
 
 ## macOS
 
