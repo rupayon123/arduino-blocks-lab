@@ -46,7 +46,7 @@ The public gallery is a JSON index at `apps/web/public/packs/index.json`. Each e
 }
 ```
 
-Use same-origin URLs for packs bundled with the app, or public HTTPS URLs for community packs hosted elsewhere.
+Use same-origin URLs for packs bundled with the app, or public HTTPS URLs for community packs hosted elsewhere. A gallery entry can point to one tiny component pack or to a larger classroom pack with several sensors and lessons.
 
 The URL installer accepts direct JSON URLs and common GitHub links such as:
 
@@ -93,6 +93,6 @@ Lessons can be simple starter projects, or they can include a classroom guide. T
 
 Step `action` may be `build`, `wire`, `code`, `test`, `upload`, or `reflect`.
 
-See `examples/extensions/soil-moisture-pack.json` for a minimal community sensor pack.
+See `examples/extensions/soil-moisture-pack.json` for a minimal community sensor pack, and `examples/extensions/classroom-sensors-pack.json` for a multi-sensor classroom pack with four guided lessons.
 
 The authoritative JSON Schema lives in `docs/extension.schema.json`.

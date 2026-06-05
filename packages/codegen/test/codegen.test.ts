@@ -105,4 +105,15 @@ describe("generateSketch", () => {
     expect(lesson).toBeDefined();
     expect(generateSketch(lesson!.starterProject, merged.catalog).code).toContain("analogRead(A1)");
   });
+
+  it("generates Arduino C++ for a multi-sensor classroom extension lesson", () => {
+    const sample = JSON.parse(readFileSync(new URL("../../../examples/extensions/classroom-sensors-pack.json", import.meta.url), "utf8"));
+    const parsed = parseExtensionManifest(sample);
+    const merged = mergeExtensionManifest(catalog, parsed.manifest!);
+    const lesson = merged.catalog.lessons.find((candidate) => candidate.id === "lesson-line-tracker");
+
+    expect(parsed.errors).toEqual([]);
+    expect(lesson).toBeDefined();
+    expect(generateSketch(lesson!.starterProject, merged.catalog).code).toContain("digitalRead(3)");
+  });
 });

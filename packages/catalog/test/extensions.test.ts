@@ -70,6 +70,24 @@ describe("extension manifests", () => {
     expect(parsed.manifest?.lessons?.[0]?.success?.[0]).toContain("Serial values");
   });
 
+  it("accepts the public classroom sensor example pack", () => {
+    const sample = JSON.parse(readFileSync(new URL("../../../examples/extensions/classroom-sensors-pack.json", import.meta.url), "utf8"));
+    const parsed = parseExtensionManifest(sample);
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.manifest?.components?.map((component) => component.id)).toEqual([
+      "water-level-sensor",
+      "sound-level-sensor",
+      "line-tracking-sensor",
+      "tilt-switch"
+    ]);
+    expect(parsed.manifest?.lessons).toHaveLength(4);
+
+    const merged = mergeExtensionManifest(catalog, parsed.manifest!);
+    expect(merged.warnings).toEqual([]);
+    expect(merged.catalog.lessons.some((lesson) => lesson.id === "lesson-line-tracker")).toBe(true);
+  });
+
   it("rejects invalid guided lesson steps", () => {
     const parsed = parseExtensionManifest({
       ...soilPack,

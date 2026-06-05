@@ -8,6 +8,7 @@ Open-source Arduino block coding, inspired by the friendliness of LEGO SPIKE and
 - Node local agent wrapping `arduino-cli` for board detection, all Arduino CLI FQBN targets, library/core install, compile, upload, and serial monitor.
 - Shared TypeScript packages for block-pack schemas, the V1 hardware catalog, and Arduino C++ generation.
 - Persistent JSON hardware-pack gallery and import from files or URLs for community sensors, boards, lessons, wiring hints, and Arduino C++ snippets.
+- Built-in gallery packs for plant probes and common classroom sensors show how the catalog grows toward broader Arduino hardware coverage.
 - GitHub Pages deployment workflow for the public web app.
 - One-command local agent launcher that installs missing workspace packages, checks Arduino CLI, and starts the upload helper.
 
@@ -70,6 +71,6 @@ npm run build
 
 ## Open source
 
-Arduino Blocks Lab is released under the MIT License. Contributions can add new block packs through the extension format in `docs/extension-format.md`; a starter example lives in `examples/extensions/soil-moisture-pack.json`.
+Arduino Blocks Lab is released under the MIT License. Contributions can add new block packs through the extension format in `docs/extension-format.md`; examples live in `examples/extensions/soil-moisture-pack.json` and `examples/extensions/classroom-sensors-pack.json`.
 
 See `ROADMAP.md` and `CONTRIBUTING.md` for the next build targets.

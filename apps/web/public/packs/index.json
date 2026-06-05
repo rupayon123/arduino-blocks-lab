@@ -9,6 +9,15 @@
       "tags": ["sensor", "plants", "serial"],
       "componentCount": 1,
       "lessonCount": 1
+    },
+    {
+      "id": "community.classroom-sensors",
+      "name": "Classroom Sensor Starter Pack",
+      "description": "Adds water level, sound level, line tracking, and tilt switch modules with serial-reading lessons.",
+      "url": "packs/classroom-sensors-pack.json",
+      "tags": ["sensor", "classroom", "serial"],
+      "componentCount": 4,
+      "lessonCount": 4
     }
   ]
 }

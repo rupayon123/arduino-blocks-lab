@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parsePackGallery, resolveGalleryPackUrl } from "./packGallery";
 
@@ -48,5 +49,17 @@ describe("pack gallery", () => {
     expect(resolveGalleryPackUrl(entry, "https://pisces123.github.io/arduino-blocks-lab/?v=gallery")).toBe(
       "https://pisces123.github.io/arduino-blocks-lab/packs/soil-moisture-pack.json"
     );
+  });
+
+  it("parses the bundled public gallery index", () => {
+    const index = JSON.parse(readFileSync(new URL("../public/packs/index.json", import.meta.url), "utf8"));
+    const entries = parsePackGallery(index);
+
+    expect(entries.map((entry) => entry.id)).toEqual(["community.soil-moisture", "community.classroom-sensors"]);
+    expect(entries.find((entry) => entry.id === "community.classroom-sensors")).toMatchObject({
+      componentCount: 4,
+      lessonCount: 4,
+      tags: ["sensor", "classroom", "serial"]
+    });
   });
 });

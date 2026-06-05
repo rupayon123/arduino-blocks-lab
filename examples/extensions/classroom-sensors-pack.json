@@ -1,0 +1,368 @@
+{
+  "formatVersion": "1.0.0",
+  "id": "community.classroom-sensors",
+  "name": "Classroom Sensor Starter Pack",
+  "version": "0.1.0",
+  "components": [
+    {
+      "id": "water-level-sensor",
+      "name": "Water Level Sensor",
+      "category": "sensor",
+      "description": "Analog water level strip for simple leak, rain, and container projects.",
+      "defaultPins": {
+        "signal": "A2",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "pinLabels": {
+        "signal": "Analog pin",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "wiring": [
+        {
+          "label": "Signal",
+          "from": "S",
+          "to": "{{pins.signal}}"
+        },
+        {
+          "label": "Power",
+          "from": "+",
+          "to": "5V"
+        },
+        {
+          "label": "Ground",
+          "from": "-",
+          "to": "GND"
+        }
+      ],
+      "runtime": {
+        "setup": ["pinMode({{pins.signal}}, INPUT);"]
+      },
+      "simulatorHints": ["Use a potentiometer in Wokwi to simulate low and high water readings."]
+    },
+    {
+      "id": "sound-level-sensor",
+      "name": "Sound Level Sensor",
+      "category": "sensor",
+      "description": "Analog microphone sound level module for noise and clap experiments.",
+      "defaultPins": {
+        "signal": "A3",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "pinLabels": {
+        "signal": "Analog pin",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "wiring": [
+        {
+          "label": "Signal",
+          "from": "AOUT",
+          "to": "{{pins.signal}}"
+        },
+        {
+          "label": "Power",
+          "from": "VCC",
+          "to": "5V"
+        },
+        {
+          "label": "Ground",
+          "from": "GND",
+          "to": "GND"
+        }
+      ],
+      "runtime": {
+        "setup": ["pinMode({{pins.signal}}, INPUT);"]
+      },
+      "simulatorHints": ["Use an analog slider or potentiometer to model changing sound level."]
+    },
+    {
+      "id": "line-tracking-sensor",
+      "name": "Line Tracking Sensor",
+      "category": "sensor",
+      "description": "Digital reflective IR line sensor for robot path and contrast projects.",
+      "defaultPins": {
+        "signal": 3,
+        "power": "5V",
+        "ground": "GND"
+      },
+      "pinLabels": {
+        "signal": "Digital pin",
+        "power": "5V",
+        "ground": "GND"
+      },
+      "wiring": [
+        {
+          "label": "Signal",
+          "from": "OUT",
+          "to": "D{{pins.signal}}"
+        },
+        {
+          "label": "Power",
+          "from": "VCC",
+          "to": "5V"
+        },
+        {
+          "label": "Ground",
+          "from": "GND",
+          "to": "GND"
+        }
+      ],
+      "runtime": {
+        "setup": ["pinMode({{pins.signal}}, INPUT);"]
+      },
+      "simulatorHints": ["Use a pushbutton or digital switch in Wokwi to represent dark versus light surfaces."]
+    },
+    {
+      "id": "tilt-switch",
+      "name": "Tilt Switch",
+      "category": "input",
+      "description": "Simple digital tilt switch for motion, shake, and orientation projects.",
+      "defaultPins": {
+        "signal": 4,
+        "ground": "GND"
+      },
+      "pinLabels": {
+        "signal": "Digital pin",
+        "ground": "GND"
+      },
+      "wiring": [
+        {
+          "label": "Signal",
+          "from": "one leg",
+          "to": "D{{pins.signal}}"
+        },
+        {
+          "label": "Ground",
+          "from": "other leg",
+          "to": "GND"
+        }
+      ],
+      "runtime": {
+        "setup": ["pinMode({{pins.signal}}, INPUT_PULLUP);"]
+      },
+      "simulatorHints": ["Use a pushbutton in Wokwi to simulate the tilt switch closing to ground."]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-water-level",
+      "title": "Water Watch",
+      "level": "word",
+      "goal": "Read a water level strip and compare dry, damp, and wet values.",
+      "minutes": 25,
+      "concepts": ["analog input", "sensor thresholds", "serial monitor"],
+      "materials": ["Arduino Uno", "water level sensor", "cup of water", "jumper wires"],
+      "steps": [
+        {
+          "title": "Wire the strip",
+          "detail": "Connect signal, power, and ground, then keep the sensor dry before uploading.",
+          "action": "wire",
+          "checklist": ["Signal is on A2", "VCC is on 5V", "GND is connected"]
+        },
+        {
+          "title": "Compare readings",
+          "detail": "Open the serial monitor and touch only the lower part of the strip to water.",
+          "action": "test",
+          "checklist": ["Dry value is recorded", "Wet value is higher or lower in a repeatable way"]
+        },
+        {
+          "title": "Pick a warning point",
+          "detail": "Choose a threshold that could mean the container is getting too full.",
+          "action": "reflect",
+          "checklist": ["A threshold is written down", "Students can explain why calibration matters"]
+        }
+      ],
+      "success": ["Serial water values change as the strip touches more water."],
+      "teacherNotes": ["Use shallow water and dry the strip after class to reduce corrosion."],
+      "starterProject": {
+        "schemaVersion": "1.0.0",
+        "name": "Water Watch",
+        "boardId": "arduino-uno",
+        "components": [
+          {
+            "id": "water_1",
+            "componentId": "water-level-sensor",
+            "label": "Water Strip",
+            "pins": {
+              "signal": "A2",
+              "power": "5V",
+              "ground": "GND"
+            }
+          }
+        ],
+        "program": [
+          {
+            "kind": "read-analog-serial",
+            "componentId": "water_1",
+            "label": "water"
+          },
+          {
+            "kind": "delay",
+            "ms": 500
+          }
+        ]
+      }
+    },
+    {
+      "id": "lesson-sound-level",
+      "title": "Sound Meter",
+      "level": "word",
+      "goal": "Stream analog sound readings and compare quiet versus loud moments.",
+      "minutes": 25,
+      "concepts": ["analog input", "sampling", "serial monitor"],
+      "materials": ["Arduino Uno", "sound level sensor", "jumper wires"],
+      "steps": [
+        {
+          "title": "Wire the microphone module",
+          "detail": "Connect AOUT to the analog pin shown in the project.",
+          "action": "wire",
+          "checklist": ["Signal is on A3", "Power is 5V", "Ground is connected"]
+        },
+        {
+          "title": "Watch quiet and loud values",
+          "detail": "Open the serial monitor, then clap or tap near the sensor and compare the numbers.",
+          "action": "test",
+          "checklist": ["Quiet value is recorded", "Loud value changes", "Values settle after the sound stops"]
+        }
+      ],
+      "success": ["Serial sound values react to louder classroom sounds."],
+      "teacherNotes": ["Many low-cost sound modules need their onboard sensitivity screw adjusted before class."],
+      "starterProject": {
+        "schemaVersion": "1.0.0",
+        "name": "Sound Meter",
+        "boardId": "arduino-uno",
+        "components": [
+          {
+            "id": "sound_1",
+            "componentId": "sound-level-sensor",
+            "label": "Sound Sensor",
+            "pins": {
+              "signal": "A3",
+              "power": "5V",
+              "ground": "GND"
+            }
+          }
+        ],
+        "program": [
+          {
+            "kind": "read-analog-serial",
+            "componentId": "sound_1",
+            "label": "sound"
+          },
+          {
+            "kind": "delay",
+            "ms": 250
+          }
+        ]
+      }
+    },
+    {
+      "id": "lesson-line-tracker",
+      "title": "Line Detector",
+      "level": "word",
+      "goal": "Read a digital line sensor and detect dark versus light surfaces.",
+      "minutes": 30,
+      "concepts": ["digital input", "robot sensing", "calibration"],
+      "materials": ["Arduino Uno", "line tracking sensor", "white paper", "black tape", "jumper wires"],
+      "steps": [
+        {
+          "title": "Wire the line sensor",
+          "detail": "Connect OUT, VCC, and GND, then face the sensor toward the paper surface.",
+          "action": "wire",
+          "checklist": ["OUT is on D3", "VCC is on 5V", "GND is connected"]
+        },
+        {
+          "title": "Compare surfaces",
+          "detail": "Move from white paper to black tape and watch the digital value change.",
+          "action": "test",
+          "checklist": ["White surface value is recorded", "Black tape value is recorded", "The onboard threshold is adjusted if needed"]
+        }
+      ],
+      "success": ["The digital reading changes between the two surface colors."],
+      "teacherNotes": ["Glossy tape can reflect differently; matte black tape is easiest for first tests."],
+      "starterProject": {
+        "schemaVersion": "1.0.0",
+        "name": "Line Detector",
+        "boardId": "arduino-uno",
+        "components": [
+          {
+            "id": "line_1",
+            "componentId": "line-tracking-sensor",
+            "label": "Line Sensor",
+            "pins": {
+              "signal": 3,
+              "power": "5V",
+              "ground": "GND"
+            }
+          }
+        ],
+        "program": [
+          {
+            "kind": "read-digital-serial",
+            "componentId": "line_1",
+            "label": "line"
+          },
+          {
+            "kind": "delay",
+            "ms": 250
+          }
+        ]
+      }
+    },
+    {
+      "id": "lesson-tilt-switch",
+      "title": "Tilt Switch",
+      "level": "icon",
+      "goal": "Read a tilt switch and see how motion becomes a digital signal.",
+      "minutes": 20,
+      "concepts": ["digital input", "pull-up resistor", "motion sensing"],
+      "materials": ["Arduino Uno", "tilt switch", "jumper wires"],
+      "steps": [
+        {
+          "title": "Wire the switch",
+          "detail": "Connect one leg to the signal pin and the other leg to ground.",
+          "action": "wire",
+          "checklist": ["Signal is on D4", "Other leg is on GND", "Internal pull-up is used"]
+        },
+        {
+          "title": "Tilt and read",
+          "detail": "Open the serial monitor and slowly change the switch angle.",
+          "action": "test",
+          "checklist": ["One position reads HIGH", "The other position reads LOW"]
+        }
+      ],
+      "success": ["Serial output changes when the switch tilts."],
+      "teacherNotes": ["Tilt switches can be bouncy; students may see fast changes near the tipping point."],
+      "starterProject": {
+        "schemaVersion": "1.0.0",
+        "name": "Tilt Reader",
+        "boardId": "arduino-uno",
+        "components": [
+          {
+            "id": "tilt_1",
+            "componentId": "tilt-switch",
+            "label": "Tilt Switch",
+            "pins": {
+              "signal": 4,
+              "ground": "GND"
+            }
+          }
+        ],
+        "program": [
+          {
+            "kind": "read-digital-serial",
+            "componentId": "tilt_1",
+            "label": "tilt"
+          },
+          {
+            "kind": "delay",
+            "ms": 250
+          }
+        ]
+      }
+    }
+  ]
+}
