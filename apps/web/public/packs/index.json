@@ -1,0 +1,14 @@
+{
+  "formatVersion": "1.0.0",
+  "packs": [
+    {
+      "id": "community.soil-moisture",
+      "name": "Community Soil Moisture Pack",
+      "description": "Adds a capacitive soil moisture sensor, wiring hints, serial readings, and a Plant Probe lesson.",
+      "url": "packs/soil-moisture-pack.json",
+      "tags": ["sensor", "plants", "serial"],
+      "componentCount": 1,
+      "lessonCount": 1
+    }
+  ]
+}

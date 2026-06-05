@@ -56,6 +56,7 @@ import { collectProjectCoach, type CoachStepState } from "./projectCoach";
 import { describeProgramStep } from "./programDescriptions";
 import { createBuildGuide } from "./buildGuide";
 import { normalizePackUrl } from "./packUrls";
+import { parsePackGallery, resolveGalleryPackUrl, type PackGalleryEntry } from "./packGallery";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -317,12 +318,15 @@ export default function App() {
   const [missionProgress, setMissionProgress] = useState<Record<string, boolean>>(loadMissionProgress);
   const [packUrl, setPackUrl] = useState("");
   const [packUrlBusy, setPackUrlBusy] = useState(false);
+  const [packGallery, setPackGallery] = useState<PackGalleryEntry[]>([]);
+  const [packGalleryStatus, setPackGalleryStatus] = useState("Loading gallery");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const extensionInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCatalog = useMemo(() => {
     return extensionPacks.reduce((current, pack) => mergeExtensionManifest(current, pack.manifest).catalog, defaultCatalog);
   }, [extensionPacks]);
+  const installedPackIds = useMemo(() => new Set(extensionPacks.map((pack) => pack.id)), [extensionPacks]);
   const generated = useMemo(() => generateSketch(project, activeCatalog), [project, activeCatalog]);
   const editorCode = codeView === "cpp" ? generated.code : learningPreview(project, codeView, activeCatalog);
   const editorLanguage = codeView === "cpp" ? "cpp" : codeView;
@@ -413,6 +417,26 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(extensionPacksKey, serializeExtensionPacks(extensionPacks));
   }, [extensionPacks]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPackGallery() {
+      try {
+        const response = await fetch(new URL("packs/index.json", window.location.href).toString(), { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        const entries = parsePackGallery(JSON.parse(await response.text()));
+        if (cancelled) return;
+        setPackGallery(entries);
+        setPackGalleryStatus(entries.length === 0 ? "Gallery empty" : `${entries.length} pack${entries.length === 1 ? "" : "s"}`);
+      } catch (error) {
+        if (!cancelled) setPackGalleryStatus(`Gallery unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    void loadPackGallery();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -725,8 +749,8 @@ export default function App() {
     }
   }
 
-  function importExamplePack() {
-    const url = new URL("packs/soil-moisture-pack.json", window.location.href).toString();
+  function importGalleryPack(entry: PackGalleryEntry) {
+    const url = resolveGalleryPackUrl(entry, window.location.href);
     setPackUrl(url);
     void importExtensionPackFromUrl(url);
   }
@@ -1177,6 +1201,43 @@ export default function App() {
                 </div>
               ))}
             </div>
+            <div className="gallery-block">
+              <div className="gallery-heading">
+                <strong>Gallery</strong>
+                <span>{packGalleryStatus}</span>
+              </div>
+              <div className="gallery-list">
+                {packGallery.length === 0 ? (
+                  <div className="empty-row">{packGalleryStatus}</div>
+                ) : (
+                  packGallery.map((entry) => {
+                    const installed = installedPackIds.has(entry.id);
+                    return (
+                      <div className={`gallery-card ${installed ? "installed" : ""}`} key={entry.id}>
+                        <div>
+                          <strong>{entry.name}</strong>
+                          <p>{entry.description}</p>
+                          <span>
+                            {entry.componentCount ?? 0} parts · {entry.lessonCount ?? 0} lessons
+                          </span>
+                          {entry.tags.length > 0 && (
+                            <div className="gallery-tags">
+                              {entry.tags.slice(0, 3).map((tag) => (
+                                <small key={`${entry.id}-${tag}`}>{tag}</small>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button disabled={packUrlBusy || installed} onClick={() => importGalleryPack(entry)} title={`Install ${entry.name}`}>
+                          {installed ? <CheckCircle2 size={15} /> : <PackagePlus size={15} />}
+                          {installed ? "Installed" : "Install"}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
             <label className="pack-url-field">
               <span>Pack URL</span>
               <div className="pack-url-row">
@@ -1199,10 +1260,6 @@ export default function App() {
               <button onClick={() => extensionInputRef.current?.click()}>
                 <PackagePlus size={16} />
                 Import
-              </button>
-              <button disabled={packUrlBusy} onClick={importExamplePack}>
-                <Sparkles size={16} />
-                Soil pack
               </button>
               <button disabled={extensionPacks.length === 0} onClick={resetExtensionPacks}>
                 <RotateCcw size={16} />

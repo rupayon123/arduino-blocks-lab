@@ -21,7 +21,7 @@ The V1 app ships one built-in pack for Uno/Nano/Mega starter hardware. Future pa
 
 ## Importing Packs
 
-The web app can import JSON hardware packs from the toolbar button with the package icon, from a local file in the Packs panel, or from a URL. Imported packs are saved in browser storage and merged into the running catalog when the app opens:
+The web app can import JSON hardware packs from the built-in gallery, from the toolbar button with the package icon, from a local file in the Packs panel, or from a URL. Imported packs are saved in browser storage and merged into the running catalog when the app opens:
 
 - `boards` appear in the board picker and provide pin maps for wiring diagnostics.
 - `components` appear in hardware search/categories and can be added to projects.
@@ -29,6 +29,24 @@ The web app can import JSON hardware packs from the toolbar button with the pack
 - `lessons` appear in the mission path if their starter projects use components from the merged catalog.
 
 The `Packs` panel shows installed packs, lets you remove one pack, and can reset back to the built-in catalog.
+
+## Gallery Index
+
+The public gallery is a JSON index at `apps/web/public/packs/index.json`. Each entry points to an extension manifest:
+
+```json
+{
+  "id": "community.soil-moisture",
+  "name": "Community Soil Moisture Pack",
+  "description": "Adds a capacitive soil moisture sensor and a Plant Probe lesson.",
+  "url": "packs/soil-moisture-pack.json",
+  "tags": ["sensor", "plants", "serial"],
+  "componentCount": 1,
+  "lessonCount": 1
+}
+```
+
+Use same-origin URLs for packs bundled with the app, or public HTTPS URLs for community packs hosted elsewhere.
 
 The URL installer accepts direct JSON URLs and common GitHub links such as:
 
