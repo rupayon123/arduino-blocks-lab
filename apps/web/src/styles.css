@@ -226,6 +226,28 @@ button:disabled {
   font-size: 12px;
 }
 
+.heading-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mini-action {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #073d66;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .category-tabs {
   overflow-x: auto;
   padding-bottom: 2px;
@@ -793,6 +815,77 @@ button:disabled {
 .diagnostic-row.tip svg,
 .diagnostic-row.ok svg {
   color: var(--green);
+}
+
+.pin-map {
+  max-height: 116px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  overflow: auto;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fcff;
+}
+
+.pin-chip {
+  min-width: 39px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #cce3ef;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--muted);
+}
+
+.pin-chip strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.pin-chip small {
+  min-width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--deep-blue);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pin-chip.used {
+  border-color: var(--green);
+  background: var(--soft-green);
+  color: #17563d;
+}
+
+.pin-chip.analog.used {
+  border-color: var(--blue);
+  background: var(--soft-blue);
+  color: #073d66;
+}
+
+.pin-chip.reserved:not(.used) {
+  border-style: dashed;
+  background: #fff7dc;
+  color: #7d5d00;
+}
+
+.pin-chip.conflict {
+  border-color: var(--coral);
+  background: var(--soft-coral);
+  color: #8c2a1d;
+}
+
+.pin-chip.conflict small {
+  background: var(--coral);
 }
 
 .wiring-block strong {

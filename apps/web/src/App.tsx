@@ -48,6 +48,7 @@ import { importedPackFromManifest, parseStoredExtensionPacks, serializeExtension
 import { parseStoredProject, serializeProject } from "./projectStorage";
 import { collectUploadReadiness, type AgentCliStatus, type UploadChecklistState } from "./uploadReadiness";
 import { appendSerialLineEnding, commonBaudRates, lineEndingLabel, normalizeBaudRate, type SerialLineEnding } from "./serialConsole";
+import { autoAssignProjectPins, collectBoardPinUsage } from "./pinPlanner";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -354,6 +355,7 @@ export default function App() {
   const effectiveFqbn = targetLabel(project.boardId, selectedFqbn, activeCatalog);
   const externalLibraries = libraryNames(project, activeCatalog);
   const wiringDiagnostics = useMemo(() => collectWiringDiagnostics(project, selectedBoard, activeCatalog.components), [project, selectedBoard, activeCatalog.components]);
+  const boardPinUsage = useMemo(() => collectBoardPinUsage(project, selectedBoard, activeCatalog.components), [project, selectedBoard, activeCatalog.components]);
   const uploadReadiness = useMemo(
     () =>
       collectUploadReadiness({
@@ -481,6 +483,21 @@ export default function App() {
         component.id === instanceId ? { ...component, pins: { ...component.pins, [pinName]: coercePinValue(value) } } : component
       )
     }));
+  }
+
+  function applyAutoPins() {
+    const result = autoAssignProjectPins(project, selectedBoard, activeCatalog.components);
+    setProject(result.project);
+    const summary =
+      result.changes.length > 0
+        ? `Auto pins updated ${result.changes.length} connection${result.changes.length === 1 ? "" : "s"}.`
+        : "Auto pins found no changes to make.";
+    setAgentLog((current) => [
+      summary,
+      ...result.changes.slice(0, 3).map((change) => `${change.componentLabel} ${change.pinName}: ${String(change.from)} -> ${String(change.to)}`),
+      ...result.skipped.slice(0, 2).map((item) => `${item.componentLabel} ${item.pinName}: ${item.reason}`),
+      ...current
+    ]);
   }
 
   async function detectBoards() {
@@ -981,9 +998,15 @@ export default function App() {
 
         <aside className="right-panel">
           <section className="panel-section wiring">
-            <div className="section-heading">
+            <div className="section-heading wiring-heading">
               <h2>Wiring</h2>
-              <span>{selectedBoard?.name}</span>
+              <div className="heading-actions">
+                <button className="mini-action" disabled={!selectedBoard || project.components.length === 0} onClick={applyAutoPins}>
+                  <Sparkles size={14} />
+                  Auto pins
+                </button>
+                <span>{selectedBoard?.name}</span>
+              </div>
             </div>
             <div className={`diagnostics-block ${criticalWiringCount > 0 ? "has-warnings" : ""}`}>
               <div className="diagnostics-heading">
@@ -1006,6 +1029,18 @@ export default function App() {
                   </div>
                 ))
               )}
+            </div>
+            <div className="pin-map" aria-label="Board pin usage">
+              {boardPinUsage.map((pin) => (
+                <span
+                  className={`pin-chip ${pin.kind} ${pin.usedBy.length > 0 ? "used" : ""} ${pin.conflict ? "conflict" : ""} ${pin.reserved ? "reserved" : ""}`}
+                  key={`${pin.kind}-${pin.pin}`}
+                  title={pin.usedBy.length > 0 ? pin.usedBy.join(", ") : pin.reserved ? "Serial pin; avoid when possible." : "Free pin"}
+                >
+                  <strong>{pin.label}</strong>
+                  {pin.usedBy.length > 0 && <small>{pin.usedBy.length}</small>}
+                </span>
+              ))}
             </div>
             {project.components.map((instance) => {
               const definition = componentDefinition(instance, activeCatalog.components);
