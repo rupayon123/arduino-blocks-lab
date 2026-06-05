@@ -22,6 +22,7 @@ import {
   Search,
   Send,
   MessageSquareText,
+  Share2,
   Sparkles,
   SquareStack,
   Terminal,
@@ -49,6 +50,7 @@ import { parseStoredProject, serializeProject } from "./projectStorage";
 import { collectUploadReadiness, type AgentCliStatus, type UploadChecklistState } from "./uploadReadiness";
 import { appendSerialLineEnding, commonBaudRates, lineEndingLabel, normalizeBaudRate, type SerialLineEnding } from "./serialConsole";
 import { autoAssignProjectPins, collectBoardPinUsage } from "./pinPlanner";
+import { projectFromShareHash, shareUrlForProject } from "./projectShare";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -200,6 +202,14 @@ function loadCurrentProject(): ProjectDocument | undefined {
   }
 }
 
+function loadSharedProject(): ProjectDocument | undefined {
+  return projectFromShareHash(window.location.hash);
+}
+
+function loadInitialProject(): ProjectDocument {
+  return loadSharedProject() ?? loadCurrentProject() ?? starterProjects.blink;
+}
+
 function describeStep(step: ProgramStep): string {
   switch (step.kind) {
     case "digital-write":
@@ -321,8 +331,9 @@ const starterCards: StarterCard[] = [
 
 export default function App() {
   const [extensionPacks, setExtensionPacks] = useState<ImportedExtensionPack[]>(loadExtensionPacks);
-  const [project, setProject] = useState<ProjectDocument>(() => cloneProject(loadCurrentProject() ?? starterProjects.blink));
+  const [project, setProject] = useState<ProjectDocument>(() => cloneProject(loadInitialProject()));
   const [projectSavedAt, setProjectSavedAt] = useState<Date | null>(null);
+  const [shareStatus, setShareStatus] = useState(() => (loadSharedProject() ? "Shared link loaded" : "Share link ready"));
   const [mode, setMode] = useState<Mode>("blocks");
   const [codeView, setCodeView] = useState<CodeView>("cpp");
   const [reloadKey, setReloadKey] = useState(() => crypto.randomUUID());
@@ -427,6 +438,17 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(extensionPacksKey, serializeExtensionPacks(extensionPacks));
   }, [extensionPacks]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const shared = loadSharedProject();
+      if (!shared) return;
+      loadProject(shared);
+      setShareStatus("Shared link loaded");
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   useEffect(() => {
     try {
@@ -615,6 +637,19 @@ export default function App() {
     saveBlob(`${project.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.ino`, generated.code, "text/x-arduino");
   }
 
+  async function copyShareLink() {
+    const url = shareUrlForProject({ ...project, generatedSketch: generated.code }, window.location.href);
+    window.history.replaceState(null, "", url);
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus("Share link copied");
+      setAgentLog((current) => ["Copied project share link.", ...current]);
+    } catch {
+      setShareStatus("Share link in address bar");
+      setAgentLog((current) => ["Share link is ready in the address bar.", ...current]);
+    }
+  }
+
   async function exportWokwiProject() {
     const zip = new JSZip();
     const unsupported = unsupportedWokwiComponents(project, activeCatalog.components);
@@ -723,6 +758,9 @@ export default function App() {
           <button title="Save project" onClick={exportProject}>
             <Save size={18} />
           </button>
+          <button title="Copy share link" onClick={() => void copyShareLink()}>
+            <Share2 size={18} />
+          </button>
           <button title="Download sketch" onClick={exportSketch}>
             <Download size={18} />
           </button>
@@ -785,6 +823,10 @@ export default function App() {
         <span>
           <Save size={16} />
           {projectSavedAt ? `Autosaved ${projectSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Autosave ready"}
+        </span>
+        <span>
+          <Share2 size={16} />
+          {shareStatus}
         </span>
         {generated.warnings.map((warning) => (
           <span className="warning" key={warning}>
