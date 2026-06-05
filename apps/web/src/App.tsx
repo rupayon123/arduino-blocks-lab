@@ -38,6 +38,13 @@ import { createWokwiDiagram, unsupportedWokwiComponents } from "./wokwiExport";
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
 
+type StarterCard = {
+  id: string;
+  tag: string;
+  goal: string;
+  project: ProjectDocument;
+};
+
 type DetectedPort = {
   address: string;
   label: string;
@@ -249,6 +256,45 @@ function learningPreview(project: ProjectDocument, language: Exclude<CodeView, "
     "}"
   ].join("\n");
 }
+
+const starterCards: StarterCard[] = [
+  {
+    id: "blink",
+    tag: "First upload",
+    goal: "Blink the built-in LED and see the generated C++ immediately.",
+    project: starterProjects.blink
+  },
+  {
+    id: "button-led",
+    tag: "Input",
+    goal: "Wire a button, read it safely, and control an LED.",
+    project: starterProjects.buttonLed
+  },
+  {
+    id: "servo-knob",
+    tag: "Motion",
+    goal: "Map a potentiometer to a hobby servo angle.",
+    project: starterProjects.servoKnob
+  },
+  {
+    id: "distance-meter",
+    tag: "Sensor",
+    goal: "Measure ultrasonic distance and stream readings over serial.",
+    project: starterProjects.ultrasonicDistance
+  },
+  {
+    id: "weather-lcd",
+    tag: "Display",
+    goal: "Read a DHT sensor and show status on an LCD.",
+    project: starterProjects.dhtDisplay
+  },
+  {
+    id: "neopixel-glow",
+    tag: "Color",
+    goal: "Animate a NeoPixel strip with a tiny color loop.",
+    project: starterProjects.neopixelAnimation
+  }
+];
 
 export default function App() {
   const [project, setProject] = useState<ProjectDocument>(() => cloneProject(starterProjects.blink));
@@ -574,6 +620,37 @@ export default function App() {
 
       <div className="workspace-grid">
         <aside className="left-panel">
+          <section className="panel-section starter-section">
+            <div className="section-heading">
+              <h2>Starters</h2>
+              <span>{starterCards.length}</span>
+            </div>
+            <div className="starter-list">
+              {starterCards.map((starter) => {
+                const active = project.name === starter.project.name;
+                return (
+                  <button
+                    className={`starter-card ${active ? "active" : ""}`}
+                    key={starter.id}
+                    onClick={() => loadProject(starter.project)}
+                    title={`Load ${starter.project.name}`}
+                  >
+                    <span className="starter-topline">
+                      <span>{starter.tag}</span>
+                      <span>{starter.project.components.length} parts</span>
+                    </span>
+                    <strong>{starter.project.name}</strong>
+                    <p>{starter.goal}</p>
+                    <span className="starter-foot">
+                      <Play size={14} />
+                      Load
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="panel-section">
             <div className="section-heading">
               <h2>Hardware</h2>
