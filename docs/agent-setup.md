@@ -6,6 +6,8 @@ The public web app can generate and autosave projects by itself, but real USB up
 
 ```bash
 brew install arduino-cli
+git clone https://github.com/pisces123/arduino-blocks-lab.git
+cd arduino-blocks-lab
 npm install
 npm run dev:agent
 ```
@@ -17,6 +19,9 @@ npm run dev:agent
 3. Run:
 
 ```powershell
+winget install ArduinoSA.CLI
+git clone https://github.com/pisces123/arduino-blocks-lab.git
+cd arduino-blocks-lab
 npm install
 npm run dev:agent
 ```
@@ -29,7 +34,11 @@ npm run dev:agent
 4. Run:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+git clone https://github.com/pisces123/arduino-blocks-lab.git
+cd arduino-blocks-lab
 npm install
+sudo usermod -a -G dialout $USER
 npm run dev:agent
 ```
 

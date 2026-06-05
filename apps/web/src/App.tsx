@@ -5,10 +5,12 @@ import {
   Cable,
   CheckCircle2,
   CircuitBoard,
+  Clipboard,
   Code2,
   Cpu,
   Download,
   Eraser,
+  ExternalLink,
   FilePlus,
   FileText,
   FolderOpen,
@@ -69,6 +71,7 @@ import CircuitStudioPanel from "./CircuitStudioPanel";
 import IconBlocksPanel from "./IconBlocksPanel";
 import { createProjectIdeaMatches, type ProjectIdea } from "./ideaBuilder";
 import { collectDeviceWorkflow, type DeviceWorkflowAction, type DeviceWorkflowRunState, type DeviceWorkflowStepState } from "./deviceWorkflow";
+import { agentSetupDocsUrl, agentSetupPlatforms, createAgentSetupScript, getAgentSetupSteps, type AgentSetupPlatform } from "./agentSetup";
 
 type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -407,6 +410,8 @@ export default function App() {
   const [projectStyle, setProjectStyle] = useState<ProjectStyle>("word");
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newProjectStyle, setNewProjectStyle] = useState<ProjectStyle>("word");
+  const [agentSetupOpen, setAgentSetupOpen] = useState(false);
+  const [agentSetupPlatform, setAgentSetupPlatform] = useState<AgentSetupPlatform>("mac");
   const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
   const [reloadKey, setReloadKey] = useState(() => crypto.randomUUID());
   const [agentOnline, setAgentOnline] = useState(false);
@@ -518,6 +523,8 @@ export default function App() {
   };
   const completedMissionCount = activeCatalog.lessons.filter((lesson) => missionProgress[lesson.id]).length;
   const nextMission = activeCatalog.lessons.find((lesson) => !missionProgress[lesson.id]) ?? activeCatalog.lessons[0];
+  const agentSetupSteps = getAgentSetupSteps(agentSetupPlatform);
+  const agentSetupScript = createAgentSetupScript(agentSetupPlatform);
   const visibleComponents = useMemo(() => {
     const query = componentSearch.trim().toLowerCase();
     const pool = query ? activeCatalog.components : byCategory(activeCatalog.components, selectedCategory);
@@ -898,6 +905,15 @@ export default function App() {
     if (action === "compile") return void compileSketch();
     if (action === "upload") return void uploadSketch();
     if (action === "monitor") return void toggleSerialMonitor();
+  }
+
+  async function copyAgentSetupText(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setAgentLog((current) => [`Copied ${label}.`, ...current].slice(0, 80));
+    } catch {
+      setAgentLog((current) => [`Copy failed for ${label}. Select the command text and copy it manually.`, ...current].slice(0, 80));
+    }
   }
 
   function coachIcon(state: CoachStepState) {
@@ -1658,6 +1674,16 @@ export default function App() {
               <h2>Board</h2>
               <span>{agentOnline ? "ready" : "local"}</span>
             </div>
+            <div className="agent-setup-card">
+              <span>
+                <strong>Local agent setup</strong>
+                Compile, upload, detect USB boards, and read serial from the public site.
+              </span>
+              <button onClick={() => setAgentSetupOpen(true)}>
+                <Cable size={15} />
+                Setup Agent
+              </button>
+            </div>
             <div className={`upload-readiness ${uploadReadiness.readyToUpload ? "ready" : uploadReadiness.readyToCompile ? "compile" : "blocked"}`}>
               <div className="readiness-summary">
                 <strong>{uploadReadiness.title}</strong>
@@ -1858,6 +1884,65 @@ export default function App() {
             <button className="create-project-button" onClick={createNewProject}>
               Create
             </button>
+          </section>
+        </div>
+      )}
+
+      {agentSetupOpen && (
+        <div className="modal-scrim" role="presentation" onMouseDown={() => setAgentSetupOpen(false)}>
+          <section className="agent-setup-modal" role="dialog" aria-modal="true" aria-labelledby="agent-setup-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" aria-label="Close agent setup" onClick={() => setAgentSetupOpen(false)}>
+              <X size={24} />
+            </button>
+            <span className="modal-kicker">Local Agent</span>
+            <h2 id="agent-setup-title">Program real Arduino boards</h2>
+            <p>
+              The public web app talks to a tiny localhost helper. Keep the helper running while you detect boards, compile, upload, or use the serial monitor.
+            </p>
+            <div className="agent-platform-tabs" role="tablist" aria-label="Choose setup platform">
+              {agentSetupPlatforms.map((platform) => (
+                <button
+                  className={agentSetupPlatform === platform.id ? "active" : ""}
+                  key={platform.id}
+                  role="tab"
+                  aria-selected={agentSetupPlatform === platform.id}
+                  onClick={() => setAgentSetupPlatform(platform.id)}
+                >
+                  {platform.label}
+                </button>
+              ))}
+            </div>
+            <div className="agent-copy-all">
+              <button onClick={() => void copyAgentSetupText(agentSetupScript, `${agentSetupPlatform} setup commands`)}>
+                <Clipboard size={15} />
+                Copy all commands
+              </button>
+              <a href={agentSetupDocsUrl} target="_blank" rel="noreferrer">
+                <ExternalLink size={15} />
+                Full setup doc
+              </a>
+            </div>
+            <div className="agent-setup-steps">
+              {agentSetupSteps.map((step, index) => (
+                <article className="agent-setup-step" key={step.id}>
+                  <em>{index + 1}</em>
+                  <span>
+                    <strong>{step.title}</strong>
+                    {step.detail}
+                    {step.command && <code>{step.command}</code>}
+                  </span>
+                  {step.command && (
+                    <button title={`Copy ${step.title}`} onClick={() => void copyAgentSetupText(step.command!, step.title)}>
+                      <Clipboard size={15} />
+                    </button>
+                  )}
+                </article>
+              ))}
+            </div>
+            <div className="agent-setup-check">
+              <strong>When it is running</strong>
+              <span>Return to the Board panel and click Check agent. The status should move from offline to Agent + CLI ready.</span>
+            </div>
           </section>
         </div>
       )}
