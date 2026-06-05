@@ -8,6 +8,7 @@ import {
   Cpu,
   Download,
   Eraser,
+  FileText,
   FolderOpen,
   Gauge,
   Globe2,
@@ -52,6 +53,8 @@ import { appendSerialLineEnding, commonBaudRates, lineEndingLabel, normalizeBaud
 import { autoAssignProjectPins, collectBoardPinUsage } from "./pinPlanner";
 import { projectFromShareHash, shareUrlForProject } from "./projectShare";
 import { collectProjectCoach, type CoachStepState } from "./projectCoach";
+import { describeProgramStep } from "./programDescriptions";
+import { createBuildGuide } from "./buildGuide";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -211,53 +214,10 @@ function loadInitialProject(): ProjectDocument {
   return loadSharedProject() ?? loadCurrentProject() ?? starterProjects.blink;
 }
 
-function describeStep(step: ProgramStep): string {
-  switch (step.kind) {
-    case "digital-write":
-      return `set digital output ${step.componentId ?? step.pin} to ${step.value}`;
-    case "analog-write":
-      return `set PWM output ${step.componentId ?? step.pin} to ${step.value}`;
-    case "delay":
-      return `wait ${step.ms} ms`;
-    case "serial-print":
-      return `print ${JSON.stringify(step.value)}`;
-    case "button-controls-led":
-      return "button controls LED";
-    case "potentiometer-controls-servo":
-      return "map knob value to servo angle";
-    case "servo-write":
-      return `set servo angle to ${step.angle}`;
-    case "rgb-write":
-      return `set RGB color to ${step.red}, ${step.green}, ${step.blue}`;
-    case "ultrasonic-serial":
-      return "measure distance and print centimeters";
-    case "dht-serial":
-      return "read temperature and humidity";
-    case "lcd-print":
-      return `print ${JSON.stringify(step.text)} on LCD`;
-    case "oled-print":
-      return `print ${JSON.stringify(step.text)} on OLED`;
-    case "neopixel-fill":
-      return `fill NeoPixels with ${step.red}, ${step.green}, ${step.blue}`;
-    case "tone":
-      return `play ${step.frequency} Hz tone`;
-    case "relay-write":
-      return `set relay to ${step.value}`;
-    case "read-analog-serial":
-      return "read analog value and print it";
-    case "read-digital-serial":
-      return "read digital value and print it";
-    case "ir-read-serial":
-      return "read IR code and print it";
-    default:
-      return "run block";
-  }
-}
-
 function learningPreview(project: ProjectDocument, language: Exclude<CodeView, "cpp">, catalog: Catalog): string {
   const board = boardName(project.boardId, catalog);
   const steps = project.program.map((step) =>
-    describeStep(step)
+    describeProgramStep(step)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "")
@@ -655,6 +615,12 @@ export default function App() {
     saveBlob(`${project.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.ino`, generated.code, "text/x-arduino");
   }
 
+  function exportBuildGuide() {
+    const guide = createBuildGuide({ ...project, generatedSketch: generated.code }, activeCatalog);
+    saveBlob(`${project.name.replace(/[^a-zA-Z0-9_-]/g, "_")}-build-guide.md`, guide, "text/markdown");
+    setAgentLog((current) => ["Build guide exported with parts, wiring, checks, and generated sketch.", ...current]);
+  }
+
   async function copyShareLink() {
     const url = shareUrlForProject({ ...project, generatedSketch: generated.code }, window.location.href);
     window.history.replaceState(null, "", url);
@@ -673,6 +639,7 @@ export default function App() {
     const unsupported = unsupportedWokwiComponents(project, activeCatalog.components);
     zip.file("sketch.ino", generated.code);
     zip.file("diagram.json", JSON.stringify(createWokwiDiagram(project), null, 2));
+    zip.file("BUILD_GUIDE.md", createBuildGuide({ ...project, generatedSketch: generated.code }, activeCatalog, { includeSketch: false }));
     const libraries = externalLibraries;
     if (libraries.length) zip.file("libraries.txt", `${libraries.join("\n")}\n`);
     zip.file(
@@ -781,6 +748,9 @@ export default function App() {
           </button>
           <button title="Download sketch" onClick={exportSketch}>
             <Download size={18} />
+          </button>
+          <button title="Download build guide" onClick={exportBuildGuide}>
+            <FileText size={18} />
           </button>
           <button title="Download Wokwi project" onClick={() => void exportWokwiProject()}>
             <Globe2 size={18} />
