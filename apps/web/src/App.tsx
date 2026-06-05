@@ -68,6 +68,7 @@ import { createCircuitStudioModel } from "./circuitStudio";
 import CircuitStudioPanel from "./CircuitStudioPanel";
 import IconBlocksPanel from "./IconBlocksPanel";
 import { createProjectIdeaMatches, type ProjectIdea } from "./ideaBuilder";
+import { collectDeviceWorkflow, type DeviceWorkflowAction, type DeviceWorkflowRunState, type DeviceWorkflowStepState } from "./deviceWorkflow";
 
 type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -416,6 +417,9 @@ export default function App() {
   const [selectedFqbn, setSelectedFqbn] = useState(defaultBoards[0]?.fqbn ?? "");
   const [boardSearch, setBoardSearch] = useState("");
   const [boardTargets, setBoardTargets] = useState<BoardTarget[]>([]);
+  const [librariesReady, setLibrariesReady] = useState(true);
+  const [compileState, setCompileState] = useState<DeviceWorkflowRunState>("idle");
+  const [uploadState, setUploadState] = useState<DeviceWorkflowRunState>("idle");
   const [serialOpen, setSerialOpen] = useState(false);
   const [serialBaudRate, setSerialBaudRate] = useState("9600");
   const [serialLineEnding, setSerialLineEnding] = useState<SerialLineEnding>("newline");
@@ -467,6 +471,23 @@ export default function App() {
         wiringDiagnostics
       }),
     [agentOnline, cliStatus, effectiveFqbn, externalLibraries, selectedPort, wiringDiagnostics]
+  );
+  const deviceWorkflow = useMemo(
+    () =>
+      collectDeviceWorkflow({
+        agentOnline,
+        cliStatus,
+        fqbn: effectiveFqbn,
+        selectedPort,
+        libraries: externalLibraries,
+        librariesReady,
+        uploadReadiness,
+        compileState,
+        uploadState,
+        serialOpen,
+        wiringDiagnostics
+      }),
+    [agentOnline, cliStatus, compileState, effectiveFqbn, externalLibraries, librariesReady, selectedPort, serialOpen, uploadReadiness, uploadState, wiringDiagnostics]
   );
   const projectCoach = useMemo(
     () =>
@@ -529,21 +550,38 @@ export default function App() {
   }, [activeCatalog]);
 
   useEffect(() => {
-    agentHealth().then(async (ok) => {
-      setAgentOnline(ok);
-      if (!ok) {
-        setAgentLog(["Agent is offline. Run npm run dev:agent or npm run dev."]);
-        return;
-      }
-      const status = await agentRpc<AgentCliStatus>("agent.status");
-      setCliStatus(status.ok && status.data ? status.data : { available: false, cli: "arduino-cli", error: status.error });
-      setAgentLog([
-        status.ok && status.data?.available
-          ? `Agent connected. Arduino CLI ready at ${status.data.cli}.`
-          : `Agent connected, but Arduino CLI is not ready: ${status.error ?? status.data?.error ?? "unknown error"}`
-      ]);
-    });
+    void refreshAgent();
   }, []);
+
+  useEffect(() => {
+    setLibrariesReady(externalLibraries.length === 0);
+  }, [externalLibraries]);
+
+  useEffect(() => {
+    setCompileState("idle");
+    setUploadState("idle");
+  }, [effectiveFqbn, generated.code]);
+
+  useEffect(() => {
+    setUploadState("idle");
+  }, [selectedPort]);
+
+  async function refreshAgent() {
+    setAgentLog((current) => ["Checking local agent and Arduino CLI.", ...current].slice(0, 80));
+    const ok = await agentHealth();
+    setAgentOnline(ok);
+    if (!ok) {
+      setAgentLog(["Agent is offline. Run npm run dev:agent or npm run dev."]);
+      return;
+    }
+    const status = await agentRpc<AgentCliStatus>("agent.status");
+    setCliStatus(status.ok && status.data ? status.data : { available: false, cli: "arduino-cli", error: status.error });
+    setAgentLog([
+      status.ok && status.data?.available
+        ? `Agent connected. Arduino CLI ready at ${status.data.cli}.`
+        : `Agent connected, but Arduino CLI is not ready: ${status.error ?? status.data?.error ?? "unknown error"}`
+    ]);
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = themePreference;
@@ -746,14 +784,18 @@ export default function App() {
   async function installLibraries() {
     const names = externalLibraries;
     if (names.length === 0) {
+      setLibrariesReady(true);
       setAgentLog((current) => ["No external libraries needed for this sketch.", ...current]);
       return;
     }
     const response = await agentRpc("libraries.install", { libraries: names });
+    setLibrariesReady(response.ok);
     setAgentLog((current) => [response.ok ? `Installed libraries: ${names.join(", ")}` : `Library install failed: ${response.error}`, ...current]);
   }
 
   async function compileSketch() {
+    setCompileState("running");
+    setUploadState("idle");
     const response = await agentRpc("sketch.compile", {
       name: project.name,
       boardId: project.boardId,
@@ -761,10 +803,13 @@ export default function App() {
       libraries: externalLibraries,
       code: generated.code
     });
+    setCompileState(response.ok ? "success" : "error");
+    if (response.ok) setLibrariesReady(true);
     setAgentLog((current) => [response.ok ? "Compile finished." : `Compile failed: ${response.error}`, ...current]);
   }
 
   async function uploadSketch() {
+    setUploadState("running");
     const response = await agentRpc("sketch.upload", {
       name: project.name,
       boardId: project.boardId,
@@ -773,6 +818,11 @@ export default function App() {
       port: selectedPort,
       code: generated.code
     });
+    setUploadState(response.ok ? "success" : "error");
+    if (response.ok) {
+      setCompileState("success");
+      setLibrariesReady(true);
+    }
     setAgentLog((current) => [response.ok ? `Upload finished on ${selectedPort}.` : `Upload failed: ${response.error}`, ...current]);
   }
 
@@ -819,6 +869,35 @@ export default function App() {
     if (state === "ready") return <CheckCircle2 size={15} />;
     if (state === "warning" || state === "blocked") return <AlertTriangle size={15} />;
     return <Sparkles size={15} />;
+  }
+
+  function workflowIcon(state: DeviceWorkflowStepState) {
+    if (state === "done") return <CheckCircle2 size={15} />;
+    if (state === "blocked" || state === "warning") return <AlertTriangle size={15} />;
+    if (state === "current") return <Play size={15} />;
+    return <Sparkles size={15} />;
+  }
+
+  function workflowActionDisabled(action: DeviceWorkflowAction) {
+    if (compileState === "running" || uploadState === "running") return true;
+    if (action === "none") return true;
+    if (action === "detect") return !agentOnline || !cliStatus?.available;
+    if (action === "search-target") return !agentOnline || !cliStatus?.available;
+    if (action === "install-libraries") return !agentOnline || !cliStatus?.available || externalLibraries.length === 0;
+    if (action === "compile") return !uploadReadiness.readyToCompile;
+    if (action === "upload") return !uploadReadiness.readyToUpload || compileState !== "success";
+    if (action === "monitor") return !readyToMonitor && !serialOpen;
+    return false;
+  }
+
+  function runWorkflowAction(action: DeviceWorkflowAction) {
+    if (action === "check-agent") return void refreshAgent();
+    if (action === "detect") return void detectBoards();
+    if (action === "search-target") return void searchBoards();
+    if (action === "install-libraries") return void installLibraries();
+    if (action === "compile") return void compileSketch();
+    if (action === "upload") return void uploadSketch();
+    if (action === "monitor") return void toggleSerialMonitor();
   }
 
   function coachIcon(state: CoachStepState) {
@@ -1591,6 +1670,32 @@ export default function App() {
                     <span>
                       <strong>{item.label}</strong>
                       {item.detail}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="device-flow">
+              <div className="device-flow-heading">
+                <span>
+                  <strong>{deviceWorkflow.title}</strong>
+                  {deviceWorkflow.detail}
+                </span>
+                <button disabled={workflowActionDisabled(deviceWorkflow.nextAction)} onClick={() => runWorkflowAction(deviceWorkflow.nextAction)}>
+                  <Play size={15} />
+                  {deviceWorkflow.nextLabel}
+                </button>
+              </div>
+              <div className="device-flow-progress" aria-label="Real board setup progress">
+                <span style={{ width: `${deviceWorkflow.progress}%` }} />
+              </div>
+              <div className="device-flow-steps">
+                {deviceWorkflow.steps.map((step) => (
+                  <div className={`device-flow-step ${step.state}`} key={step.id}>
+                    {workflowIcon(step.state)}
+                    <span>
+                      <strong>{step.label}</strong>
+                      {step.detail}
                     </span>
                   </div>
                 ))}

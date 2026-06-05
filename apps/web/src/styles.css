@@ -2513,6 +2513,99 @@ html[data-theme="dark"] .breadboard-model {
   color: var(--coral);
 }
 
+.device-flow {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--soft-blue) 48%, transparent), transparent 66%),
+    var(--paper);
+}
+
+.device-flow-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-flow-heading > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.device-flow-heading strong {
+  color: var(--heading);
+  font-size: 13px;
+}
+
+.device-flow-heading button {
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.device-flow-progress {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--field);
+}
+
+.device-flow-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--green), var(--amber));
+  transition: width 180ms ease;
+}
+
+.device-flow-steps {
+  display: grid;
+  gap: 6px;
+}
+
+.device-flow-step {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.device-flow-step svg {
+  margin-top: 1px;
+}
+
+.device-flow-step strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.device-flow-step.done svg {
+  color: var(--green);
+}
+
+.device-flow-step.current svg,
+.device-flow-step.waiting svg {
+  color: var(--deep-blue);
+}
+
+.device-flow-step.warning svg,
+.device-flow-step.blocked svg {
+  color: var(--coral);
+}
+
 .fqbn-field {
   display: grid;
   gap: 6px;
