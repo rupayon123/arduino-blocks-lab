@@ -25,6 +25,7 @@ describe("circuit studio model", () => {
     expect(model.placements).toHaveLength(1);
     expect(model.wires.length).toBeGreaterThan(0);
     expect(model.events.map((event) => event.title)).toContain("Built-in LED goes HIGH");
+    expect(model.benchTests.map((test) => test.title)).toContain("Watch Built-in LED");
     expect(model.steps.find((step) => step.id === "behavior")?.state).toBe("done");
   });
 
@@ -35,5 +36,21 @@ describe("circuit studio model", () => {
     expect(model.stats.powerWires).toBeGreaterThan(0);
     expect(model.stats.signalWires).toBeGreaterThan(0);
     expect(model.events.some((event) => event.tone === "display")).toBe(true);
+    expect(model.benchTests.some((test) => test.title === "Change room weather")).toBe(true);
+    expect(model.benchTests.some((test) => test.title === "Read the display")).toBe(true);
+  });
+
+  it("turns knob and servo projects into a motion bench test", () => {
+    const model = studioFor(starterProjects.servoKnob);
+
+    expect(model.benchTests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Turn the knob",
+          tone: "motion"
+        })
+      ])
+    );
+    expect(model.benchTests[0]?.expected).toContain("0, 90, and 180 degrees");
   });
 });

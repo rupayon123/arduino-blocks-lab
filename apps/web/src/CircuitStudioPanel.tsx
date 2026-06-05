@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, Cpu, RadioTower, Sparkles, Zap } from "lucide-react";
-import type { CircuitStudioEventTone, CircuitStudioModel, CircuitStudioStepState } from "./circuitStudio";
+import type { CircuitStudioBenchTestTone, CircuitStudioEventTone, CircuitStudioModel, CircuitStudioStepState } from "./circuitStudio";
 
 type Props = {
   model: CircuitStudioModel;
@@ -16,6 +16,13 @@ function eventIcon(tone: CircuitStudioEventTone) {
   if (tone === "wait") return <Clock3 size={15} />;
   if (tone === "serial") return <RadioTower size={15} />;
   if (tone === "input") return <Cpu size={15} />;
+  return <Zap size={15} />;
+}
+
+function benchIcon(tone: CircuitStudioBenchTestTone) {
+  if (tone === "serial") return <RadioTower size={15} />;
+  if (tone === "input") return <Cpu size={15} />;
+  if (tone === "motion") return <Sparkles size={15} />;
   return <Zap size={15} />;
 }
 
@@ -119,6 +126,29 @@ export default function CircuitStudioPanel({ model }: Props) {
                   </span>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="circuit-card">
+            <div className="circuit-card-heading">
+              <strong>Bench Test</strong>
+              <span>{model.benchTests.length} checks</span>
+            </div>
+            <div className="circuit-bench-list">
+              {model.benchTests.length === 0 ? (
+                <div className="empty-row">Add a behavior block to get a bench test.</div>
+              ) : (
+                model.benchTests.map((test) => (
+                  <div className={`circuit-bench-test ${test.tone}`} key={test.id}>
+                    {benchIcon(test.tone)}
+                    <span>
+                      <strong>{test.title}</strong>
+                      <small>{test.setup}</small>
+                      {test.expected}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 

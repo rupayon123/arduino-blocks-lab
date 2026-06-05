@@ -1567,13 +1567,15 @@ html[data-theme="dark"] .breadboard-model {
 }
 
 .circuit-step-list,
-.circuit-event-list {
+.circuit-event-list,
+.circuit-bench-list {
   display: grid;
   gap: 8px;
 }
 
 .circuit-step,
-.circuit-event {
+.circuit-event,
+.circuit-bench-test {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
@@ -1583,12 +1585,14 @@ html[data-theme="dark"] .breadboard-model {
 }
 
 .circuit-step svg,
-.circuit-event svg {
+.circuit-event svg,
+.circuit-bench-test svg {
   margin-top: 1px;
 }
 
 .circuit-step strong,
-.circuit-event strong {
+.circuit-event strong,
+.circuit-bench-test strong {
   display: block;
   color: var(--ink);
   font-size: 12px;
@@ -1644,6 +1648,52 @@ html[data-theme="dark"] .breadboard-model {
 .circuit-event.display svg,
 .circuit-event.wait svg {
   color: var(--amber);
+}
+
+.circuit-bench-test {
+  grid-template-columns: 28px minmax(0, 1fr);
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--soft-blue) 34%, transparent), transparent 64%),
+    var(--paper);
+}
+
+.circuit-bench-test svg {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.circuit-bench-test small {
+  display: block;
+  margin: 2px 0 3px;
+  color: var(--heading);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.circuit-bench-test.output svg {
+  color: var(--coral);
+}
+
+.circuit-bench-test.input svg {
+  color: var(--green);
+}
+
+.circuit-bench-test.motion svg {
+  color: #9f99ff;
+}
+
+.circuit-bench-test.display svg {
+  color: var(--amber);
+}
+
+.circuit-bench-test.serial svg {
+  color: var(--deep-blue);
 }
 
 .code-view-tabs {

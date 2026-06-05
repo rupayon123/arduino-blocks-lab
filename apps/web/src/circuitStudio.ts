@@ -45,6 +45,16 @@ export type CircuitStudioEvent = {
   tone: CircuitStudioEventTone;
 };
 
+export type CircuitStudioBenchTestTone = "output" | "input" | "motion" | "display" | "serial";
+
+export type CircuitStudioBenchTest = {
+  id: string;
+  title: string;
+  setup: string;
+  expected: string;
+  tone: CircuitStudioBenchTestTone;
+};
+
 export type CircuitStudioModel = {
   boardName: string;
   projectName: string;
@@ -52,6 +62,7 @@ export type CircuitStudioModel = {
   wires: CircuitStudioWire[];
   steps: CircuitStudioStep[];
   events: CircuitStudioEvent[];
+  benchTests: CircuitStudioBenchTest[];
   stats: {
     components: number;
     wires: number;
@@ -322,6 +333,160 @@ function createEvents(project: ProjectDocument, connections: WiringCanvasConnect
   return project.program.map((step, index) => eventFromStep(step, index, project, connections)).slice(0, 10);
 }
 
+function highState(value: "HIGH" | "LOW" | boolean) {
+  return value === "HIGH" || value === true;
+}
+
+function benchTestFromStep(step: ProgramStep, index: number, project: ProjectDocument, connections: WiringCanvasConnection[]): CircuitStudioBenchTest | undefined {
+  const id = `bench-${index}-${step.kind}`;
+  switch (step.kind) {
+    case "digital-write": {
+      const isHigh = highState(step.value);
+      return {
+        id,
+        title: `Watch ${componentLabel(project, step.componentId)}`,
+        setup: `Force ${signalLabel(connections, step.componentId)} ${isHigh ? "HIGH" : "LOW"} in the bench.`,
+        expected: `${componentLabel(project, step.componentId)} should ${isHigh ? "turn on or energize" : "turn off or relax"}.`,
+        tone: "output"
+      };
+    }
+    case "analog-write":
+      return {
+        id,
+        title: `Sweep ${componentLabel(project, step.componentId)}`,
+        setup: `Try PWM 0, 128, and ${step.value} on ${signalLabel(connections, step.componentId)}.`,
+        expected: "Brightness, speed, or output strength should rise smoothly as PWM increases.",
+        tone: "output"
+      };
+    case "serial-print":
+      return {
+        id,
+        title: "Open Serial Monitor",
+        setup: "Start the bench serial console at the sketch baud rate.",
+        expected: `${JSON.stringify(step.value)} should print${step.newline === false ? "" : " on its own line"}.`,
+        tone: "serial"
+      };
+    case "read-analog-serial":
+      return {
+        id,
+        title: `Move ${componentLabel(project, step.componentId)}`,
+        setup: "Drag the analog test value from 0 to 1023.",
+        expected: `${componentLabel(project, step.componentId)} readings should stream as changing serial values.`,
+        tone: "serial"
+      };
+    case "read-digital-serial":
+      return {
+        id,
+        title: `Toggle ${componentLabel(project, step.componentId)}`,
+        setup: "Flip the digital test state between LOW and HIGH.",
+        expected: `${componentLabel(project, step.componentId)} should print the matching digital state.`,
+        tone: "serial"
+      };
+    case "button-controls-led":
+      return {
+        id,
+        title: "Press the button",
+        setup: `${componentLabel(project, step.buttonId)} reads LOW while pressed, then HIGH when released.`,
+        expected: `${componentLabel(project, step.ledId)} turns on during the press and turns off after release.`,
+        tone: "input"
+      };
+    case "potentiometer-controls-servo":
+      return {
+        id,
+        title: "Turn the knob",
+        setup: `${componentLabel(project, step.potentiometerId)} moves through 0, 512, and 1023.`,
+        expected: `${componentLabel(project, step.servoId)} should sweep near 0, 90, and 180 degrees.`,
+        tone: "motion"
+      };
+    case "servo-write":
+      return {
+        id,
+        title: `Check ${componentLabel(project, step.componentId)}`,
+        setup: `Set the bench servo angle to ${step.angle}.`,
+        expected: `${componentLabel(project, step.componentId)} should rotate to the requested position without jitter.`,
+        tone: "motion"
+      };
+    case "rgb-write":
+      return {
+        id,
+        title: "Preview RGB mix",
+        setup: `Set red ${step.red}, green ${step.green}, and blue ${step.blue}.`,
+        expected: `${componentLabel(project, step.componentId)} should show the same blended color.`,
+        tone: "output"
+      };
+    case "ultrasonic-serial":
+      return {
+        id,
+        title: "Move the target",
+        setup: "Try close, middle, and far target distances in centimeters.",
+        expected: `${componentLabel(project, step.componentId)} should print distance_cm values that follow the target.`,
+        tone: "serial"
+      };
+    case "dht-serial":
+      return {
+        id,
+        title: "Change room weather",
+        setup: "Try cool/dry, room, and warm/humid readings.",
+        expected: `${componentLabel(project, step.componentId)} should print temperature and humidity without NaN errors.`,
+        tone: "serial"
+      };
+    case "lcd-print":
+    case "oled-print":
+      return {
+        id,
+        title: "Read the display",
+        setup: `Clear the screen, then write ${JSON.stringify(step.text)}.`,
+        expected: `${componentLabel(project, step.componentId)} should show the text without clipping.`,
+        tone: "display"
+      };
+    case "neopixel-fill":
+      return {
+        id,
+        title: "Preview strip color",
+        setup: `Fill the strip with RGB(${step.red}, ${step.green}, ${step.blue}).`,
+        expected: `${componentLabel(project, step.componentId)} should light every pixel with the chosen color.`,
+        tone: "output"
+      };
+    case "tone":
+      return {
+        id,
+        title: "Listen for tone",
+        setup: `Play ${step.frequency} Hz for ${step.duration ?? 250} ms.`,
+        expected: `${componentLabel(project, step.componentId)} should chirp once at the chosen pitch.`,
+        tone: "output"
+      };
+    case "relay-write": {
+      const isHigh = highState(step.value);
+      return {
+        id,
+        title: `Switch ${componentLabel(project, step.componentId)}`,
+        setup: `Set the relay control pin ${isHigh ? "HIGH" : "LOW"}.`,
+        expected: `${componentLabel(project, step.componentId)} should ${isHigh ? "click closed" : "open"} in the bench preview.`,
+        tone: "output"
+      };
+    }
+    case "ir-read-serial":
+      return {
+        id,
+        title: "Send an IR code",
+        setup: "Pick a remote button code in the bench input.",
+        expected: `${componentLabel(project, step.componentId)} should print the received code in serial.`,
+        tone: "serial"
+      };
+    case "delay":
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+function createBenchTests(project: ProjectDocument, connections: WiringCanvasConnection[]) {
+  return project.program
+    .map((step, index) => benchTestFromStep(step, index, project, connections))
+    .filter((test): test is CircuitStudioBenchTest => Boolean(test))
+    .slice(0, 6);
+}
+
 export function createCircuitStudioModel(input: CircuitStudioInput): CircuitStudioModel {
   const placements = createPlacements(input.project, input.definitions);
   const wires = createWires(input.wiringCanvas.connections, placements);
@@ -337,6 +502,7 @@ export function createCircuitStudioModel(input: CircuitStudioInput): CircuitStud
     wires,
     steps: createSteps(input),
     events: createEvents(input.project, input.wiringCanvas.connections),
+    benchTests: createBenchTests(input.project, input.wiringCanvas.connections),
     stats: {
       components: input.project.components.length,
       wires: input.wiringCanvas.connections.length,
