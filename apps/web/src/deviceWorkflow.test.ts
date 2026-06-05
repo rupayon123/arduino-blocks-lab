@@ -4,6 +4,10 @@ import { collectDeviceWorkflow, type DeviceWorkflowInput } from "./deviceWorkflo
 const baseInput: DeviceWorkflowInput = {
   agentOnline: true,
   cliStatus: { available: true, cli: "arduino-cli" },
+  packageIndexNeeded: false,
+  packageIndexReady: true,
+  packageIndexState: "idle",
+  packageIndexLabel: "Arduino",
   fqbn: "arduino:avr:uno",
   core: "arduino:avr",
   coreReady: true,
@@ -60,6 +64,22 @@ describe("collectDeviceWorkflow", () => {
 
     expect(workflow.nextAction).toBe("install-core");
     expect(workflow.steps.find((step) => step.id === "core")?.state).toBe("current");
+  });
+
+  it("adds a third-party package index before preparing a matching core", () => {
+    const workflow = collectDeviceWorkflow({
+      ...baseInput,
+      packageIndexNeeded: true,
+      packageIndexReady: false,
+      packageIndexLabel: "ESP32",
+      fqbn: "esp32:esp32:esp32",
+      core: "esp32:esp32",
+      coreReady: false,
+      uploadReadiness: { ...baseInput.uploadReadiness, readyToCompile: false, readyToUpload: false }
+    });
+
+    expect(workflow.nextAction).toBe("add-package-index");
+    expect(workflow.steps.find((step) => step.id === "package-index")?.state).toBe("current");
   });
 
   it("sends incomplete board targets back to target search", () => {

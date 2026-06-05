@@ -71,6 +71,12 @@ import { createCircuitStudioModel } from "./circuitStudio";
 import CircuitStudioPanel from "./CircuitStudioPanel";
 import IconBlocksPanel from "./IconBlocksPanel";
 import { coreFromFqbn } from "./arduinoCore";
+import {
+  packageIndexPresetForCore,
+  parsePackageIndexInput,
+  searchPackageIndexPresets,
+  type BoardPackageIndexPreset
+} from "./boardPackageIndexes";
 import { createProjectIdeaMatches, type ProjectIdea } from "./ideaBuilder";
 import { createLessonGuide, lessonActionLabel, lessonLevelLabel } from "./lessonGuide";
 import { collectDeviceWorkflow, type DeviceWorkflowAction, type DeviceWorkflowRunState, type DeviceWorkflowStepState } from "./deviceWorkflow";
@@ -100,6 +106,13 @@ type DetectedPort = {
 type BoardTarget = {
   fqbn: string;
   name: string;
+};
+
+type PackageIndexResponse = {
+  urls?: string[];
+  added?: string[];
+  alreadyConfigured?: string[];
+  configured?: string[];
 };
 
 const missionProgressKey = "abl.missionProgress.v1";
@@ -429,6 +442,10 @@ export default function App() {
   const [selectedFqbn, setSelectedFqbn] = useState(defaultBoards[0]?.fqbn ?? "");
   const [boardSearch, setBoardSearch] = useState("");
   const [boardTargets, setBoardTargets] = useState<BoardTarget[]>([]);
+  const [configuredPackageIndexes, setConfiguredPackageIndexes] = useState<string[]>([]);
+  const [packageIndexInput, setPackageIndexInput] = useState("");
+  const [packageIndexState, setPackageIndexState] = useState<DeviceWorkflowRunState>("idle");
+  const [packageIndexActionTarget, setPackageIndexActionTarget] = useState("");
   const [preparedCores, setPreparedCores] = useState<string[]>([]);
   const [coreActionTarget, setCoreActionTarget] = useState("");
   const [coreState, setCoreState] = useState<DeviceWorkflowRunState>("idle");
@@ -463,6 +480,13 @@ export default function App() {
   const effectiveFqbn = targetLabel(project.boardId, selectedFqbn, activeCatalog);
   const selectedCoreTarget = useMemo(() => coreFromFqbn(effectiveFqbn), [effectiveFqbn]);
   const selectedCore = selectedCoreTarget?.core ?? "";
+  const selectedPackageIndexPreset = useMemo(() => packageIndexPresetForCore(selectedCore), [selectedCore]);
+  const packageIndexNeeded = Boolean(selectedPackageIndexPreset);
+  const packageIndexUrl = selectedPackageIndexPreset?.url ?? "";
+  const packageIndexReady = !packageIndexNeeded || configuredPackageIndexes.includes(packageIndexUrl);
+  const activePackageIndexState = packageIndexUrl && packageIndexActionTarget === packageIndexUrl ? packageIndexState : "idle";
+  const packageIndexSuggestions = useMemo(() => searchPackageIndexPresets(boardSearch, selectedCore, 3), [boardSearch, selectedCore]);
+  const packageIndexInputUrls = useMemo(() => parsePackageIndexInput(packageIndexInput), [packageIndexInput]);
   const coreReady = Boolean(selectedCore && preparedCores.includes(selectedCore));
   const activeCoreState = selectedCore && coreActionTarget === selectedCore ? coreState : "idle";
   const externalLibraries = libraryNames(project, activeCatalog);
@@ -486,6 +510,9 @@ export default function App() {
       collectUploadReadiness({
         agentOnline,
         cliStatus,
+        packageIndexNeeded,
+        packageIndexReady,
+        packageIndexLabel: selectedPackageIndexPreset?.label ?? "Arduino",
         fqbn: effectiveFqbn,
         core: selectedCore,
         coreReady,
@@ -493,13 +520,29 @@ export default function App() {
         libraries: externalLibraries,
         wiringDiagnostics
       }),
-    [agentOnline, cliStatus, coreReady, effectiveFqbn, externalLibraries, selectedCore, selectedPort, wiringDiagnostics]
+    [
+      agentOnline,
+      cliStatus,
+      coreReady,
+      effectiveFqbn,
+      externalLibraries,
+      packageIndexNeeded,
+      packageIndexReady,
+      selectedCore,
+      selectedPackageIndexPreset?.label,
+      selectedPort,
+      wiringDiagnostics
+    ]
   );
   const deviceWorkflow = useMemo(
     () =>
       collectDeviceWorkflow({
         agentOnline,
         cliStatus,
+        packageIndexNeeded,
+        packageIndexReady,
+        packageIndexState: activePackageIndexState,
+        packageIndexLabel: selectedPackageIndexPreset?.label ?? "Arduino",
         fqbn: effectiveFqbn,
         core: selectedCore,
         coreReady,
@@ -518,11 +561,15 @@ export default function App() {
       cliStatus,
       compileState,
       coreReady,
+      activePackageIndexState,
       activeCoreState,
       effectiveFqbn,
       externalLibraries,
       librariesReady,
+      packageIndexNeeded,
+      packageIndexReady,
       selectedCore,
+      selectedPackageIndexPreset?.label,
       selectedPort,
       serialOpen,
       uploadReadiness,
@@ -535,6 +582,11 @@ export default function App() {
       collectConnectionDoctor({
         agentOnline,
         cliStatus,
+        packageIndexNeeded,
+        packageIndexReady,
+        packageIndexState: activePackageIndexState,
+        packageIndexLabel: selectedPackageIndexPreset?.label ?? "Arduino",
+        packageIndexUrl,
         fqbn: effectiveFqbn,
         core: selectedCore,
         coreReady,
@@ -555,11 +607,16 @@ export default function App() {
       cliStatus,
       compileState,
       coreReady,
+      activePackageIndexState,
       activeCoreState,
       effectiveFqbn,
       externalLibraries,
       librariesReady,
+      packageIndexNeeded,
+      packageIndexReady,
+      packageIndexUrl,
       selectedCore,
+      selectedPackageIndexPreset?.label,
       selectedPort,
       serialOpen,
       uploadReadiness,
@@ -670,6 +727,12 @@ export default function App() {
     }
     const status = await agentRpc<AgentCliStatus>("agent.status");
     setCliStatus(status.ok && status.data ? status.data : { available: false, cli: "arduino-cli", error: status.error });
+    if (status.ok && status.data?.available) {
+      const indexes = await agentRpc<PackageIndexResponse>("indexes.list");
+      if (indexes.ok && indexes.data?.urls) {
+        setConfiguredPackageIndexes(indexes.data.urls);
+      }
+    }
     setAgentLog([
       status.ok && status.data?.available
         ? `Agent connected. Arduino CLI ready at ${status.data.cli}.`
@@ -884,6 +947,34 @@ export default function App() {
     setAgentLog((current) => [`Found ${targets.length} board target(s).`, ...current]);
   }
 
+  async function addPackageIndexes(urls: string[], label = "custom board package") {
+    if (urls.length === 0) {
+      setAgentLog((current) => ["Paste a Boards Manager package JSON URL before adding an index.", ...current]);
+      return;
+    }
+
+    const target = urls[0] ?? "";
+    setPackageIndexState("running");
+    setPackageIndexActionTarget(target);
+    const response = await agentRpc<PackageIndexResponse>("indexes.add", { urls });
+    setPackageIndexState(response.ok ? "success" : "error");
+    if (response.ok) {
+      const configured = response.data?.configured ?? urls;
+      setConfiguredPackageIndexes(configured);
+      setPackageIndexInput("");
+      setAgentLog((current) => [
+        `Added ${label}: ${urls.length} package URL${urls.length === 1 ? "" : "s"}. Arduino board indexes updated.`,
+        ...current
+      ]);
+      return;
+    }
+    setAgentLog((current) => [`Package index failed for ${label}: ${response.error}`, ...current]);
+  }
+
+  function addPackageIndexPreset(preset: BoardPackageIndexPreset) {
+    return addPackageIndexes([preset.url], preset.label);
+  }
+
   async function installCore() {
     if (!selectedCore) {
       setAgentLog((current) => ["Choose a full FQBN like arduino:avr:uno before preparing the board core.", ...current]);
@@ -933,6 +1024,9 @@ export default function App() {
         setPreparedCores((current) => (current.includes(selectedCore) ? current : [...current, selectedCore]));
         setCoreState("success");
       }
+      if (packageIndexUrl) {
+        setConfiguredPackageIndexes((current) => (current.includes(packageIndexUrl) ? current : [...current, packageIndexUrl]));
+      }
     }
     setAgentLog((current) => [response.ok ? "Compile finished." : `Compile failed: ${response.error}`, ...current]);
   }
@@ -955,6 +1049,9 @@ export default function App() {
         setCoreActionTarget(selectedCore);
         setPreparedCores((current) => (current.includes(selectedCore) ? current : [...current, selectedCore]));
         setCoreState("success");
+      }
+      if (packageIndexUrl) {
+        setConfiguredPackageIndexes((current) => (current.includes(packageIndexUrl) ? current : [...current, packageIndexUrl]));
       }
     }
     setAgentLog((current) => [response.ok ? `Upload finished on ${selectedPort}.` : `Upload failed: ${response.error}`, ...current]);
@@ -1019,8 +1116,9 @@ export default function App() {
   }
 
   function workflowActionDisabled(action: DeviceWorkflowAction) {
-    if (activeCoreState === "running" || compileState === "running" || uploadState === "running") return true;
+    if (activePackageIndexState === "running" || activeCoreState === "running" || compileState === "running" || uploadState === "running") return true;
     if (action === "none") return true;
+    if (action === "add-package-index") return !agentOnline || !cliStatus?.available || !packageIndexUrl || packageIndexReady;
     if (action === "detect") return !agentOnline || !cliStatus?.available;
     if (action === "search-target") return !agentOnline || !cliStatus?.available;
     if (action === "install-core") return !agentOnline || !cliStatus?.available || !selectedCore || coreReady;
@@ -1033,6 +1131,7 @@ export default function App() {
 
   function runWorkflowAction(action: DeviceWorkflowAction) {
     if (action === "check-agent") return void refreshAgent();
+    if (action === "add-package-index" && selectedPackageIndexPreset) return void addPackageIndexPreset(selectedPackageIndexPreset);
     if (action === "detect") return void detectBoards();
     if (action === "search-target") return void searchBoards();
     if (action === "install-core") return void installCore();
@@ -2142,6 +2241,61 @@ export default function App() {
                     : "Prepare before class, or let compile install it automatically."
                   : "Use a full target like arduino:avr:uno."}
               </span>
+            </div>
+            <div className="package-index-panel">
+              <div className="package-index-heading">
+                <span>
+                  <strong>Board package indexes</strong>
+                  {packageIndexNeeded
+                    ? packageIndexReady
+                      ? `${selectedPackageIndexPreset?.label} is configured.`
+                      : `${selectedPackageIndexPreset?.label} needs an extra Boards Manager URL.`
+                    : "Add ESP32, Pico, Adafruit, or other board families."}
+                </span>
+                <span>{configuredPackageIndexes.length}</span>
+              </div>
+              {packageIndexSuggestions.length > 0 && (
+                <div className="package-index-presets">
+                  {packageIndexSuggestions.map((preset) => {
+                    const configured = configuredPackageIndexes.includes(preset.url);
+                    const running = activePackageIndexState === "running" && packageIndexActionTarget === preset.url;
+                    return (
+                      <button
+                        className={configured ? "ready" : ""}
+                        disabled={!agentOnline || !cliStatus?.available || configured || activePackageIndexState === "running"}
+                        key={preset.id}
+                        onClick={() => void addPackageIndexPreset(preset)}
+                        title={preset.url}
+                      >
+                        <Globe2 size={15} />
+                        <span>
+                          <strong>{preset.label}</strong>
+                          {preset.maker}
+                        </span>
+                        <small>{configured ? "Ready" : running ? "Adding" : "Add"}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="package-index-custom">
+                <input
+                  aria-label="Custom Boards Manager package URL"
+                  value={packageIndexInput}
+                  onChange={(event) => setPackageIndexInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void addPackageIndexes(packageIndexInputUrls);
+                  }}
+                  placeholder="Paste package JSON URL"
+                />
+                <button
+                  disabled={!agentOnline || !cliStatus?.available || packageIndexInputUrls.length === 0 || activePackageIndexState === "running"}
+                  onClick={() => void addPackageIndexes(packageIndexInputUrls)}
+                  title="Add custom Boards Manager URL"
+                >
+                  <PackagePlus size={15} />
+                </button>
+              </div>
             </div>
             <div className="board-search">
               <input value={boardSearch} onChange={(event) => setBoardSearch(event.target.value)} placeholder="Search boards, e.g. nano esp32 mega" />

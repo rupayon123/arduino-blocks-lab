@@ -18,6 +18,11 @@ export type ConnectionDoctorReport = {
 export type ConnectionDoctorInput = {
   agentOnline: boolean;
   cliStatus: AgentCliStatus | null;
+  packageIndexNeeded: boolean;
+  packageIndexReady: boolean;
+  packageIndexState: DeviceWorkflowRunState;
+  packageIndexLabel: string;
+  packageIndexUrl?: string;
   fqbn: string;
   core: string;
   coreReady: boolean;
@@ -64,6 +69,7 @@ export function collectConnectionDoctor(input: ConnectionDoctorInput): Connectio
   const wiringErrors = input.wiringDiagnostics.filter((diagnostic) => diagnostic.severity === "error");
   const wiringWarnings = input.wiringDiagnostics.filter((diagnostic) => diagnostic.severity === "warning");
   const hasTarget = hasValue(input.fqbn);
+  const packageIndexDone = !input.packageIndexNeeded || input.packageIndexReady;
   const hasCore = hasValue(input.core);
   const coreDone = input.coreReady || input.compileState === "success" || input.uploadState === "success";
   const hasPort = hasValue(input.selectedPort);
@@ -126,6 +132,29 @@ export function collectConnectionDoctor(input: ConnectionDoctorInput): Connectio
     });
   }
 
+  if (input.packageIndexState === "error") {
+    return report({
+      severity: "blocked",
+      title: "Board package index did not install",
+      summary: `Arduino CLI could not add the ${input.packageIndexLabel} Boards Manager URL.`,
+      fix: input.packageIndexUrl ? `Check this URL and try again: ${input.packageIndexUrl}` : "Check the package URL and try Add index again.",
+      action: "add-package-index",
+      actionLabel: "Add index",
+      evidence: firstEvidence(messages)
+    });
+  }
+
+  if (!packageIndexDone) {
+    return report({
+      severity: "blocked",
+      title: "Add the board package index",
+      summary: `${input.packageIndexLabel} boards need an extra Boards Manager URL before Arduino CLI can find the core.`,
+      fix: "Add the package index, then search for the board target or prepare the core.",
+      action: "add-package-index",
+      actionLabel: "Add index"
+    });
+  }
+
   if (input.coreState === "error") {
     return report({
       severity: "blocked",
@@ -172,9 +201,13 @@ export function collectConnectionDoctor(input: ConnectionDoctorInput): Connectio
         severity: "blocked",
         title: "Board core does not match yet",
         summary: "Arduino CLI could not prepare the selected board target.",
-        fix: hasCore ? `Prepare ${input.core}, then compile once more.` : "Search for the board again or paste the correct FQBN, then compile once more.",
-        action: hasCore ? "install-core" : "search-target",
-        actionLabel: hasCore ? "Prepare core" : "Find target",
+        fix: input.packageIndexNeeded && !input.packageIndexReady
+          ? `Add the ${input.packageIndexLabel} package index, then compile once more.`
+          : hasCore
+            ? `Prepare ${input.core}, then compile once more.`
+            : "Search for the board again or paste the correct FQBN, then compile once more.",
+        action: input.packageIndexNeeded && !input.packageIndexReady ? "add-package-index" : hasCore ? "install-core" : "search-target",
+        actionLabel: input.packageIndexNeeded && !input.packageIndexReady ? "Add index" : hasCore ? "Prepare core" : "Find target",
         evidence: firstEvidence(messages)
       });
     }

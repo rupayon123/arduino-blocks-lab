@@ -59,16 +59,24 @@ arduino:avr:mega
 
 The web app derives the board core from the first two FQBN parts. For example, `arduino:avr:uno` uses the `arduino:avr` core. Use the Board panel's Core button to prepare that core before class, or let compile/upload prepare it automatically when needed.
 
+Some board families need an extra Boards Manager package index before Arduino CLI can find their core. The Board panel can add common package indexes for ESP32, ESP8266, Pico/RP2040, and Adafruit boards, or you can paste a custom package JSON URL. The agent saves these with:
+
+```bash
+arduino-cli config add board_manager.additional_urls <package-json-url>
+arduino-cli core update-index
+```
+
 When you compile or upload, the agent prepares the matching core and project libraries before running `arduino-cli compile` or `arduino-cli upload`.
 
-For third-party boards, install or configure their Arduino CLI package index first, then paste the board FQBN into the app.
+For third-party boards, add the package index first, then search for or paste the board FQBN into the app.
 
-The Board panel in the web app shows an upload readiness checklist before compile/upload. It checks the local agent, Arduino CLI, FQBN target, board core, USB port, required libraries, and wiring diagnostics so beginners can fix setup issues before seeing raw compiler output.
+The Board panel in the web app shows an upload readiness checklist before compile/upload. It checks the local agent, Arduino CLI, Boards Manager package index, FQBN target, board core, USB port, required libraries, and wiring diagnostics so beginners can fix setup issues before seeing raw compiler output.
 
 The same panel includes Connection Doctor. It watches the current setup state and recent compile/upload messages, then turns common failures into a likely cause and a next action:
 
 - Missing headers or library errors point learners to the Libraries button.
 - Invalid FQBN errors point learners back to board target search.
+- Missing third-party board package indexes point learners to Add index.
 - Missing platform or board-core errors point learners to Prepare core.
 - USB permission, access denied, or busy-port errors point learners to port setup help.
 - `avrdude`, sync, timeout, or no-device upload errors point learners to board target, port, cable, and reset checks.
@@ -90,6 +98,7 @@ When the agent is running, `http://127.0.0.1:47631/` shows a friendly status pag
 
 - If the app says the agent is offline, run `npm run agent` from the repo folder.
 - If the app says Arduino CLI is not ready, install `arduino-cli` and make sure it is on your `PATH`.
+- If a third-party board does not appear in search, add its Boards Manager package URL in the Board panel, then search again.
 - If a board is not detected, try another USB cable and confirm the board appears in Arduino IDE or `arduino-cli board list`.
 - If upload fails on Linux, check serial permissions.
 - If a library fails to install, confirm the library name is available through Arduino Library Manager.

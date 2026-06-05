@@ -28,6 +28,9 @@ export type UploadReadiness = {
 export type UploadReadinessInput = {
   agentOnline: boolean;
   cliStatus: AgentCliStatus | null;
+  packageIndexNeeded: boolean;
+  packageIndexReady: boolean;
+  packageIndexLabel: string;
   fqbn: string;
   core: string;
   coreReady: boolean;
@@ -89,6 +92,21 @@ export function collectUploadReadiness(input: UploadReadinessInput): UploadReadi
           label: "Board target",
           detail: "Choose or search for an Arduino board target.",
           state: "blocked"
+        },
+    input.packageIndexNeeded
+      ? {
+          id: "package-index",
+          label: "Package index",
+          detail: input.packageIndexReady
+            ? `${input.packageIndexLabel} Boards Manager URL is configured.`
+            : `Add ${input.packageIndexLabel} before installing this board core.`,
+          state: input.packageIndexReady ? "ready" : "blocked"
+        }
+      : {
+          id: "package-index",
+          label: "Package index",
+          detail: "No extra Boards Manager URL needed.",
+          state: "ready"
         },
     core
       ? {
@@ -163,7 +181,8 @@ export function collectUploadReadiness(input: UploadReadinessInput): UploadReadi
 
   const blockedCount = items.filter((item) => item.state === "blocked").length;
   const warningCount = items.filter((item) => item.state === "warning").length;
-  const readyToCompile = input.agentOnline && Boolean(input.cliStatus?.available) && Boolean(fqbn) && Boolean(core) && wiringErrors.length === 0;
+  const packageIndexReady = !input.packageIndexNeeded || input.packageIndexReady;
+  const readyToCompile = input.agentOnline && Boolean(input.cliStatus?.available) && packageIndexReady && Boolean(fqbn) && Boolean(core) && wiringErrors.length === 0;
   const readyToUpload = readyToCompile && Boolean(port);
 
   return {

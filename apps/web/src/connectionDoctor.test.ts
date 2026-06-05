@@ -14,6 +14,10 @@ const readyChecklist: ConnectionDoctorInput["uploadReadiness"] = {
 const baseInput: ConnectionDoctorInput = {
   agentOnline: true,
   cliStatus: { available: true, cli: "arduino-cli" },
+  packageIndexNeeded: false,
+  packageIndexReady: true,
+  packageIndexState: "idle",
+  packageIndexLabel: "Arduino",
   fqbn: "arduino:avr:uno",
   core: "arduino:avr",
   coreReady: true,
@@ -64,6 +68,22 @@ describe("collectConnectionDoctor", () => {
 
     expect(result.action).toBe("install-core");
     expect(result.title).toBe("Prepare board support");
+  });
+
+  it("asks for the package index before a third-party core install", () => {
+    const result = collectConnectionDoctor({
+      ...baseInput,
+      packageIndexNeeded: true,
+      packageIndexReady: false,
+      packageIndexLabel: "ESP32",
+      packageIndexUrl: "https://espressif.github.io/arduino-esp32/package_esp32_index.json",
+      fqbn: "esp32:esp32:esp32",
+      core: "esp32:esp32",
+      coreReady: false
+    });
+
+    expect(result.action).toBe("add-package-index");
+    expect(result.title).toContain("package index");
   });
 
   it("offers core preparation when Arduino CLI reports a missing platform", () => {

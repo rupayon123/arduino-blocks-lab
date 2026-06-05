@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
 import { boards } from "@abl/catalog";
+import { extractPackageIndexUrls, normalizePackageIndexUrls } from "./boardIndexes";
 import { renderAgentLandingPage } from "./landingPage";
 
 const execFileAsync = promisify(execFile);
@@ -145,6 +146,22 @@ async function installLibraries(libraries: unknown) {
   return results;
 }
 
+async function listPackageIndexUrls() {
+  const config = await runCliJson(["config", "dump"]);
+  return extractPackageIndexUrls(config);
+}
+
+async function addPackageIndexUrls(input: unknown) {
+  const urls = normalizePackageIndexUrls(input);
+  if (urls.length === 0) throw new Error("Add at least one Boards Manager package URL.");
+  const existing = await listPackageIndexUrls();
+  const missing = urls.filter((url) => !existing.includes(url));
+  const result = missing.length > 0 ? await runCli(["config", "add", "board_manager.additional_urls", ...missing], { timeout: 60_000 }) : undefined;
+  const update = await runCli(["core", "update-index"], { timeout: 180_000 });
+  const configured = await listPackageIndexUrls();
+  return { urls, added: missing, alreadyConfigured: urls.filter((url) => existing.includes(url)), configured, result, update };
+}
+
 async function handleRpc(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
   switch (method) {
     case "agent.health":
@@ -160,6 +177,10 @@ async function handleRpc(method: string, params: Record<string, unknown> = {}): 
       await runCli(["core", "update-index"], { timeout: 180_000 });
       return runCliJson(query ? ["board", "listall", query] : ["board", "listall"]);
     }
+    case "indexes.list":
+      return { urls: await listPackageIndexUrls() };
+    case "indexes.add":
+      return addPackageIndexUrls(params.urls ?? params.url);
     case "indexes.update":
       return runCli(["core", "update-index"], { timeout: 180_000 });
     case "cores.install": {

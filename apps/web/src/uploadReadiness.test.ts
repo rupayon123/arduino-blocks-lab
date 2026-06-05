@@ -8,6 +8,9 @@ function readiness(overrides: Partial<Parameters<typeof collectUploadReadiness>[
   return collectUploadReadiness({
     agentOnline: true,
     cliStatus,
+    packageIndexNeeded: false,
+    packageIndexReady: true,
+    packageIndexLabel: "Arduino",
     fqbn: "arduino:avr:uno",
     core: "arduino:avr",
     coreReady: false,
@@ -50,6 +53,19 @@ describe("collectUploadReadiness", () => {
 
     expect(result.readyToCompile).toBe(true);
     expect(result.items.find((item) => item.id === "core")?.state).toBe("info");
+  });
+
+  it("blocks compile until a required third-party package index is configured", () => {
+    const result = readiness({
+      packageIndexNeeded: true,
+      packageIndexReady: false,
+      packageIndexLabel: "ESP32",
+      fqbn: "esp32:esp32:esp32",
+      core: "esp32:esp32"
+    });
+
+    expect(result.readyToCompile).toBe(false);
+    expect(result.items.find((item) => item.id === "package-index")?.state).toBe("blocked");
   });
 
   it("blocks compile when the FQBN cannot resolve to a core", () => {

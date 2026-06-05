@@ -3,6 +3,7 @@ import type { WiringDiagnostic } from "./wiringDiagnostics";
 
 export type DeviceWorkflowAction =
   | "check-agent"
+  | "add-package-index"
   | "detect"
   | "search-target"
   | "install-core"
@@ -34,6 +35,10 @@ export type DeviceWorkflow = {
 export type DeviceWorkflowInput = {
   agentOnline: boolean;
   cliStatus: AgentCliStatus | null;
+  packageIndexNeeded: boolean;
+  packageIndexReady: boolean;
+  packageIndexState: DeviceWorkflowRunState;
+  packageIndexLabel: string;
   fqbn: string;
   core: string;
   coreReady: boolean;
@@ -60,6 +65,8 @@ function actionLabel(action: DeviceWorkflowAction) {
   switch (action) {
     case "check-agent":
       return "Check agent";
+    case "add-package-index":
+      return "Add index";
     case "detect":
       return "Detect board";
     case "search-target":
@@ -81,6 +88,7 @@ function actionLabel(action: DeviceWorkflowAction) {
 
 export function collectDeviceWorkflow(input: DeviceWorkflowInput): DeviceWorkflow {
   const agentReady = input.agentOnline && Boolean(input.cliStatus?.available);
+  const packageIndexDone = !input.packageIndexNeeded || input.packageIndexReady;
   const hasTarget = hasValue(input.fqbn);
   const hasCore = hasValue(input.core);
   const hasPort = hasValue(input.selectedPort);
@@ -103,6 +111,29 @@ export function collectDeviceWorkflow(input: DeviceWorkflowInput): DeviceWorkflo
           : "Start the local agent, then check again.",
       state: agentReady ? "done" : "blocked",
       action: "check-agent"
+    },
+    {
+      id: "package-index",
+      label: "Package index",
+      detail: input.packageIndexNeeded
+        ? packageIndexDone
+          ? `${input.packageIndexLabel} Boards Manager URL is configured.`
+          : input.packageIndexState === "running"
+            ? `Adding ${input.packageIndexLabel} to Arduino CLI.`
+            : input.packageIndexState === "error"
+              ? `Could not add ${input.packageIndexLabel}. Check the package URL.`
+              : `Add ${input.packageIndexLabel} before searching or preparing this board family.`
+        : "Default Arduino board indexes are enough for this target.",
+      state: packageIndexDone
+        ? "done"
+        : input.packageIndexState === "running"
+          ? "current"
+          : input.packageIndexState === "error"
+            ? "blocked"
+            : agentReady
+              ? "current"
+              : "waiting",
+      action: input.packageIndexNeeded ? "add-package-index" : "none"
     },
     {
       id: "port",
