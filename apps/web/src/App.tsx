@@ -49,7 +49,7 @@ import {
 } from "@abl/catalog";
 import { generateSketch } from "@abl/codegen";
 import BlocklyWorkspace from "./BlocklyWorkspace";
-import { agentHealth, agentRpc, openAgentEvents } from "./agentClient";
+import { AGENT_STATUS_URL, agentHealth, agentRpc, openAgentEvents } from "./agentClient";
 import { projectToBlocklyXml } from "./projectXml";
 import { collectWiringDiagnostics } from "./wiringDiagnostics";
 import { createWokwiDiagram, unsupportedWokwiComponents } from "./wokwiExport";
@@ -1722,10 +1722,16 @@ export default function App() {
                 <strong>Local agent setup</strong>
                 Compile, upload, detect USB boards, and read serial from the public site.
               </span>
-              <button onClick={() => setAgentSetupOpen(true)}>
-                <Cable size={15} />
-                Setup Agent
-              </button>
+              <div className="agent-setup-actions">
+                <button onClick={() => setAgentSetupOpen(true)}>
+                  <Cable size={15} />
+                  Setup
+                </button>
+                <a href={AGENT_STATUS_URL} target="_blank" rel="noreferrer">
+                  <ExternalLink size={15} />
+                  Status
+                </a>
+              </div>
             </div>
             <div className={`upload-readiness ${uploadReadiness.readyToUpload ? "ready" : uploadReadiness.readyToCompile ? "compile" : "blocked"}`}>
               <div className="readiness-summary">

@@ -1,4 +1,5 @@
-const AGENT_URL = "http://127.0.0.1:47631";
+export const AGENT_URL = "http://127.0.0.1:47631";
+export const AGENT_STATUS_URL = `${AGENT_URL}/`;
 
 export type AgentResponse<T = unknown> = {
   ok: boolean;
