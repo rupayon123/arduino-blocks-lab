@@ -8,12 +8,14 @@ import {
   Cpu,
   Download,
   Eraser,
+  FilePlus,
   FileText,
   FolderOpen,
   Gauge,
   Globe2,
   Library,
   Medal,
+  Moon,
   PackagePlus,
   Play,
   PlugZap,
@@ -26,9 +28,11 @@ import {
   Share2,
   Sparkles,
   SquareStack,
+  Sun,
   Terminal,
   Trash2,
   Upload,
+  X,
   AlertTriangle
 } from "lucide-react";
 import type { Catalog, ComponentDefinition, ComponentInstance, ExtensionManifest, ProjectDocument, ProgramStep } from "@abl/block-schema";
@@ -58,9 +62,11 @@ import { createBuildGuide } from "./buildGuide";
 import { normalizePackUrl } from "./packUrls";
 import { parsePackGallery, resolveGalleryPackUrl, type PackGalleryEntry } from "./packGallery";
 import { createWiringCanvasModel } from "./wiringCanvas";
+import { nextThemePreference, parseThemePreference, type ThemePreference } from "./theme";
 
 type Mode = "blocks" | "code" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
+type ProjectStyle = "icon" | "word" | "code";
 
 type StarterCard = {
   id: string;
@@ -83,6 +89,33 @@ type BoardTarget = {
 const missionProgressKey = "abl.missionProgress.v1";
 const extensionPacksKey = "abl.extensionPacks.v1";
 const currentProjectKey = "abl.currentProject.v1";
+const themePreferenceKey = "abl.themePreference.v1";
+
+const projectStyleOptions: Array<{
+  id: ProjectStyle;
+  title: string;
+  kicker: string;
+  detail: string;
+}> = [
+  {
+    id: "icon",
+    title: "Icon Blocks",
+    kicker: "picture-first",
+    detail: "Start with guided starter blocks and friendly visual cues."
+  },
+  {
+    id: "word",
+    title: "Word Blocks",
+    kicker: "scratch-style",
+    detail: "Build with full Blockly blocks and live Arduino C++."
+  },
+  {
+    id: "code",
+    title: "Arduino C++",
+    kicker: "real code",
+    detail: "Open the generated sketch as the main workspace."
+  }
+];
 
 function cloneProject(project: ProjectDocument): ProjectDocument {
   const cloned = JSON.parse(JSON.stringify(project)) as ProjectDocument;
@@ -209,6 +242,14 @@ function loadCurrentProject(): ProjectDocument | undefined {
   }
 }
 
+function loadThemePreference(): ThemePreference {
+  try {
+    return parseThemePreference(window.localStorage.getItem(themePreferenceKey));
+  } catch {
+    return "light";
+  }
+}
+
 function loadSharedProject(): ProjectDocument | undefined {
   return projectFromShareHash(window.location.hash);
 }
@@ -300,6 +341,10 @@ export default function App() {
   const [shareStatus, setShareStatus] = useState(() => (loadSharedProject() ? "Shared link loaded" : "Share link ready"));
   const [mode, setMode] = useState<Mode>("blocks");
   const [codeView, setCodeView] = useState<CodeView>("cpp");
+  const [projectStyle, setProjectStyle] = useState<ProjectStyle>("word");
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectStyle, setNewProjectStyle] = useState<ProjectStyle>("word");
+  const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
   const [reloadKey, setReloadKey] = useState(() => crypto.randomUUID());
   const [agentOnline, setAgentOnline] = useState(false);
   const [cliStatus, setCliStatus] = useState<AgentCliStatus | null>(null);
@@ -370,6 +415,12 @@ export default function App() {
         : wiringCanvas.summary.warning > 0
           ? `${wiringCanvas.summary.warning} warning${wiringCanvas.summary.warning === 1 ? "" : "s"}`
           : `${wiringCanvas.summary.total} ready`;
+  const activeStyleOption = projectStyleOptions.find((option) => option.id === projectStyle) ?? {
+    id: "word",
+    title: "Word Blocks",
+    kicker: "scratch-style",
+    detail: "Build with full Blockly blocks and live Arduino C++."
+  };
   const completedMissionCount = activeCatalog.lessons.filter((lesson) => missionProgress[lesson.id]).length;
   const nextMission = activeCatalog.lessons.find((lesson) => !missionProgress[lesson.id]) ?? activeCatalog.lessons[0];
   const visibleComponents = useMemo(() => {
@@ -406,6 +457,11 @@ export default function App() {
       ]);
     });
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themePreference;
+    window.localStorage.setItem(themePreferenceKey, themePreference);
+  }, [themePreference]);
 
   useEffect(() => {
     if (!agentOnline) return;
@@ -468,10 +524,33 @@ export default function App() {
     }
   }, [generated.code, project]);
 
-  function loadProject(nextProject: ProjectDocument) {
+  function applyProjectStyle(nextStyle: ProjectStyle) {
+    setProjectStyle(nextStyle);
+    if (nextStyle === "code") {
+      setMode("code");
+      setCodeView("cpp");
+      return;
+    }
+    setMode("blocks");
+  }
+
+  function loadProject(nextProject: ProjectDocument, nextStyle: ProjectStyle = projectStyle) {
     setProject(cloneProject(nextProject));
     setReloadKey(crypto.randomUUID());
-    setMode("blocks");
+    applyProjectStyle(nextStyle);
+  }
+
+  function createNewProject() {
+    const nextProject = cloneProject({
+      ...starterProjects.blink,
+      name: "Project 1",
+      lessonId: undefined
+    });
+    setProject(nextProject);
+    setReloadKey(crypto.randomUUID());
+    applyProjectStyle(newProjectStyle);
+    setNewProjectOpen(false);
+    setAgentLog((current) => [`Created Project 1 in ${projectStyleOptions.find((option) => option.id === newProjectStyle)?.title ?? "Word Blocks"}.`, ...current]);
   }
 
   function removeExtensionPack(packId: string) {
@@ -766,7 +845,7 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell style-${projectStyle}`} data-theme={themePreference}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-mark">
@@ -778,22 +857,33 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mode-tabs" role="tablist" aria-label="Editor modes">
-          <button className={mode === "blocks" ? "active" : ""} onClick={() => setMode("blocks")}>
-            <SquareStack size={18} />
-            Blocks
-          </button>
-          <button className={mode === "code" ? "active" : ""} onClick={() => setMode("code")}>
-            <Code2 size={18} />
-            Arduino C++
-          </button>
-          <button className={mode === "lessons" ? "active" : ""} onClick={() => setMode("lessons")}>
-            <Gauge size={18} />
-            Lessons
-          </button>
+        <div className="mode-stack">
+          <div className="mode-tabs" role="tablist" aria-label="Editor modes">
+            <button
+              className={mode === "blocks" ? "active" : ""}
+              onClick={() => {
+                setMode("blocks");
+                if (projectStyle === "code") setProjectStyle("word");
+              }}
+            >
+              <SquareStack size={18} />
+              Blocks
+            </button>
+            <button className={mode === "code" ? "active" : ""} onClick={() => setMode("code")}>
+              <Code2 size={18} />
+              Arduino C++
+            </button>
+            <button className={mode === "lessons" ? "active" : ""} onClick={() => setMode("lessons")}>
+              <Gauge size={18} />
+              Lessons
+            </button>
+          </div>
         </div>
 
         <div className="toolbar">
+          <button title="New project" onClick={() => setNewProjectOpen(true)}>
+            <FilePlus size={18} />
+          </button>
           <select
             aria-label="Board"
             value={project.boardId}
@@ -830,6 +920,12 @@ export default function App() {
           <button title="Import hardware pack" onClick={() => extensionInputRef.current?.click()}>
             <PackagePlus size={18} />
           </button>
+          <button
+            title={themePreference === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            onClick={() => setThemePreference((current) => nextThemePreference(current))}
+          >
+            {themePreference === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -856,6 +952,23 @@ export default function App() {
       </header>
 
       <section className="status-strip">
+        <div className="style-switch" role="group" aria-label="Coding style">
+          {projectStyleOptions.map((option) => (
+            <button
+              className={projectStyle === option.id ? "active" : ""}
+              key={option.id}
+              onClick={() => applyProjectStyle(option.id)}
+              title={option.title}
+            >
+              {option.id === "code" ? <Code2 size={15} /> : <SquareStack size={15} />}
+              <span>{option.id === "icon" ? "Icon" : option.id === "word" ? "Word" : "Code"}</span>
+            </button>
+          ))}
+        </div>
+        <span>
+          {projectStyle === "code" ? <Code2 size={16} /> : <SquareStack size={16} />}
+          {activeStyleOption.title}
+        </span>
         <span>
           <CheckCircle2 size={16} />
           {boardName(project.boardId, activeCatalog)}
@@ -1009,6 +1122,7 @@ export default function App() {
               componentDefinitions={activeCatalog.components}
               xml={project.blocksXml ?? projectToBlocklyXml(project)}
               reloadKey={reloadKey}
+              themePreference={themePreference}
               onChange={updateFromBlocks}
             />
           )}
@@ -1030,7 +1144,7 @@ export default function App() {
                 height="calc(100% - 46px)"
                 language={editorLanguage}
                 value={editorCode}
-                theme="vs-light"
+                theme={themePreference === "dark" ? "vs-dark" : "vs-light"}
                 options={{
                   minimap: { enabled: false },
                   readOnly: true,
@@ -1457,6 +1571,39 @@ export default function App() {
           </section>
         </aside>
       </div>
+
+      {newProjectOpen && (
+        <div className="modal-scrim" role="presentation" onMouseDown={() => setNewProjectOpen(false)}>
+          <section className="new-project-modal" role="dialog" aria-modal="true" aria-labelledby="new-project-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" aria-label="Close new project" onClick={() => setNewProjectOpen(false)}>
+              <X size={24} />
+            </button>
+            <span className="modal-kicker">New Project</span>
+            <h2 id="new-project-title">Project 1</h2>
+            <div className="project-style-cards" role="radiogroup" aria-label="Choose coding style">
+              {projectStyleOptions.map((option) => (
+                <button
+                  className={`project-style-card ${newProjectStyle === option.id ? "active" : ""}`}
+                  key={option.id}
+                  onClick={() => setNewProjectStyle(option.id)}
+                  role="radio"
+                  aria-checked={newProjectStyle === option.id}
+                >
+                  <span className="project-style-icon">
+                    {option.id === "code" ? <Code2 size={30} /> : <SquareStack size={30} />}
+                  </span>
+                  <strong>{option.title}</strong>
+                  <small>{option.kicker}</small>
+                  <span>{option.detail}</span>
+                </button>
+              ))}
+            </div>
+            <button className="create-project-button" onClick={createNewProject}>
+              Create
+            </button>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

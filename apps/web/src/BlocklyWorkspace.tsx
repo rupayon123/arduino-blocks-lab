@@ -3,16 +3,57 @@ import * as Blockly from "blockly/core";
 import type { ComponentDefinition, ComponentInstance, ProgramStep } from "@abl/block-schema";
 import { registerArduinoBlocks, setBlocklyComponentDefinitionProvider, setBlocklyComponentProvider, toolbox } from "./blocklyBlocks";
 import { workspaceToProgram } from "./workspaceToProgram";
+import type { ThemePreference } from "./theme";
 
 type Props = {
   components: ComponentInstance[];
   componentDefinitions: ComponentDefinition[];
   xml: string;
   reloadKey: string;
+  themePreference: ThemePreference;
   onChange: (program: ProgramStep[], blocksXml: string) => void;
 };
 
-export default function BlocklyWorkspace({ components, componentDefinitions, xml, reloadKey, onChange }: Props) {
+const lightBlocklyTheme = Blockly.Theme.defineTheme("ablLight", {
+  name: "ablLight",
+  base: Blockly.Themes.Zelos,
+  componentStyles: {
+    workspaceBackgroundColour: "#f5fbff",
+    toolboxBackgroundColour: "#fffefd",
+    toolboxForegroundColour: "#193142",
+    flyoutBackgroundColour: "#fffefd",
+    flyoutForegroundColour: "#193142",
+    scrollbarColour: "#8ad9ff",
+    insertionMarkerColour: "#14a8e0",
+    insertionMarkerOpacity: 0.36,
+    cursorColour: "#1179ba",
+    selectedGlowColour: "#14a8e0"
+  }
+});
+
+const darkBlocklyTheme = Blockly.Theme.defineTheme("ablDark", {
+  name: "ablDark",
+  base: Blockly.Themes.Zelos,
+  componentStyles: {
+    workspaceBackgroundColour: "#0c1c2b",
+    toolboxBackgroundColour: "#102133",
+    toolboxForegroundColour: "#eef9ff",
+    flyoutBackgroundColour: "#14283b",
+    flyoutForegroundColour: "#eef9ff",
+    flyoutOpacity: 1,
+    scrollbarColour: "#46c7f4",
+    insertionMarkerColour: "#8ad9ff",
+    insertionMarkerOpacity: 0.42,
+    cursorColour: "#ffd56b",
+    selectedGlowColour: "#8ad9ff"
+  }
+});
+
+function blocklyThemeFor(themePreference: ThemePreference) {
+  return themePreference === "dark" ? darkBlocklyTheme : lightBlocklyTheme;
+}
+
+export default function BlocklyWorkspace({ components, componentDefinitions, xml, reloadKey, themePreference, onChange }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
   const loadingRef = useRef(false);
@@ -30,6 +71,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       toolbox,
       trashcan: true,
       scrollbars: true,
+      theme: blocklyThemeFor(themePreference),
       zoom: {
         controls: true,
         wheel: true,
@@ -71,6 +113,10 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
   useEffect(() => {
     workspaceRef.current?.refreshToolboxSelection();
   }, [components, componentDefinitions]);
+
+  useEffect(() => {
+    workspaceRef.current?.setTheme(blocklyThemeFor(themePreference));
+  }, [themePreference]);
 
   return <div className="blockly-host" ref={containerRef} />;
 }
