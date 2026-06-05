@@ -72,7 +72,7 @@ html[data-theme="dark"] {
 
 body {
   margin: 0;
-  min-width: 1080px;
+  min-width: 0;
   min-height: 100vh;
   background: var(--page-wash);
   color: var(--ink);
@@ -299,7 +299,7 @@ button:disabled {
 .workspace-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: 280px minmax(520px, 1fr) 330px;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(290px, 330px);
   gap: 14px;
   padding: 14px;
 }
@@ -307,6 +307,7 @@ button:disabled {
 .left-panel,
 .right-panel {
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -881,6 +882,7 @@ button:disabled {
 }
 
 .main-panel {
+  min-width: 0;
   overflow: hidden;
   position: relative;
 }
@@ -2194,7 +2196,8 @@ html[data-theme="dark"] .breadboard-model {
 
 .mission-panel {
   align-content: stretch;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
 }
 
 .mission-hero {
@@ -2288,6 +2291,113 @@ html[data-theme="dark"] .breadboard-model {
   border-radius: 8px;
   padding: 0 10px;
   font-weight: 650;
+}
+
+.unit-plan-card {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--blue) 34%, var(--line));
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--soft-blue) 70%, transparent), transparent 62%),
+    var(--field);
+}
+
+.unit-plan-copy {
+  min-width: 0;
+}
+
+.unit-plan-copy span {
+  color: var(--deep-blue);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.unit-plan-copy strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--heading);
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.unit-plan-copy p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.unit-plan-metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.unit-plan-metrics span {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  min-height: 50px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-align: center;
+}
+
+.unit-plan-metrics strong {
+  color: var(--heading);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.unit-plan-chip-row {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 64px;
+  overflow: hidden;
+}
+
+.unit-plan-chip-row span {
+  min-width: 0;
+  max-width: 148px;
+  overflow: hidden;
+  padding: 5px 7px;
+  border: 1px solid color-mix(in srgb, var(--blue) 34%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 68%, var(--soft-blue));
+  color: var(--deep-blue);
+  font-size: 11px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-plan-card > button {
+  min-width: 0;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--heading);
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .mission-track {
@@ -4056,6 +4166,15 @@ html[data-theme="dark"] .breadboard-model {
   .mission-hero {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .unit-plan-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .unit-plan-card > button {
+    width: 100%;
   }
 
   .mission-pacing {

@@ -77,6 +77,7 @@ import { agentSetupDocsUrl, agentSetupPlatforms, createAgentSetupScript, getAgen
 import { collectConnectionDoctor, type ConnectionDoctorAction, type ConnectionDoctorSeverity } from "./connectionDoctor";
 import { collectWiringRepairPlan, type WiringRepairTone } from "./wiringRepair";
 import { createMissionProgression, missionStatusLabel } from "./missionProgression";
+import { createUnitPlan, createUnitPlanMarkdown, unitPlanFilename } from "./unitPlan";
 
 type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
@@ -556,6 +557,7 @@ export default function App() {
     detail: "Build with full Blockly blocks and live Arduino C++."
   };
   const missionProgression = useMemo(() => createMissionProgression(activeCatalog.lessons, missionProgress), [activeCatalog.lessons, missionProgress]);
+  const teacherUnitPlan = useMemo(() => createUnitPlan(activeCatalog.lessons, activeCatalog), [activeCatalog]);
   const nextMission = missionProgression.recommended?.lesson ?? activeCatalog.lessons[0];
   const focusedLesson =
     activeCatalog.lessons.find((lesson) => lesson.id === (lessonFocusId ?? project.lessonId)) ?? nextMission ?? activeCatalog.lessons[0];
@@ -1026,6 +1028,11 @@ export default function App() {
     saveBlob(`${lesson.title.replace(/[^a-zA-Z0-9_-]/g, "_")}-lesson-guide.md`, guide, "text/markdown");
     setLessonFocusId(lesson.id);
     setAgentLog((current) => [`Exported lesson guide: ${lesson.title}.`, ...current]);
+  }
+
+  function exportUnitPlan() {
+    saveBlob(unitPlanFilename(teacherUnitPlan), createUnitPlanMarkdown(teacherUnitPlan), "text/markdown");
+    setAgentLog((current) => ["Exported teacher unit plan with pacing, materials, libraries, and lesson path.", ...current]);
   }
 
   async function copyShareLink() {
@@ -1524,6 +1531,44 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              <section className="unit-plan-card">
+                <div className="unit-plan-copy">
+                  <span>Teacher unit plan</span>
+                  <strong>
+                    {teacherUnitPlan.sessionCount} class period{teacherUnitPlan.sessionCount === 1 ? "" : "s"} · {teacherUnitPlan.totalMinutes} min
+                  </strong>
+                  <p>
+                    {teacherUnitPlan.totalLessons} missions with {teacherUnitPlan.totalParts} parts, {teacherUnitPlan.totalWires} wires, and {teacherUnitPlan.totalBlocks} blocks.
+                  </p>
+                </div>
+                <div className="unit-plan-metrics">
+                  <span>
+                    <strong>{teacherUnitPlan.materials.length}</strong>
+                    materials
+                  </span>
+                  <span>
+                    <strong>{teacherUnitPlan.concepts.length}</strong>
+                    concepts
+                  </span>
+                  <span>
+                    <strong>{teacherUnitPlan.libraries.length}</strong>
+                    libraries
+                  </span>
+                </div>
+                <div className="unit-plan-chip-row" aria-label="Unit plan highlights">
+                  {teacherUnitPlan.materials.slice(0, 3).map((material) => (
+                    <span key={material}>{material}</span>
+                  ))}
+                  {teacherUnitPlan.concepts.slice(0, 3).map((concept) => (
+                    <span key={concept}>{concept}</span>
+                  ))}
+                </div>
+                <button onClick={exportUnitPlan}>
+                  <FileText size={16} />
+                  Export plan
+                </button>
+              </section>
 
               <div className="mission-workbench">
                 <div className="mission-track">
