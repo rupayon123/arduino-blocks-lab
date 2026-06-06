@@ -4,8 +4,14 @@ export function describeProgramStep(step: ProgramStep): string {
   switch (step.kind) {
     case "digital-write":
       return `set digital output ${step.componentId ?? step.pin} to ${step.value}`;
+    case "digital-if-write":
+      return `if pin ${step.inputPin} is ${step.expectedValue}, set pin ${step.outputPin} to ${step.outputValue}`;
+    case "pin-mode":
+      return `set pin ${step.pin} mode to ${step.mode}`;
     case "analog-write":
       return `set PWM output ${step.componentId ?? step.pin} to ${step.value}`;
+    case "delay-microseconds":
+      return `wait ${step.us} µs`;
     case "delay":
       return `wait ${step.ms} ms`;
     case "serial-print":
@@ -33,9 +39,9 @@ export function describeProgramStep(step: ProgramStep): string {
     case "relay-write":
       return `set relay to ${step.value}`;
     case "read-analog-serial":
-      return "read analog value and print it";
+      return `read analog and print as ${step.label ?? "value"}`;
     case "read-digital-serial":
-      return "read digital value and print it";
+      return `read digital and print as ${step.label ?? "value"}`;
     case "ir-read-serial":
       return "read IR code and print it";
     default:

@@ -87,28 +87,40 @@ function emitStep(step: ProgramStep, helpers: ReturnType<typeof componentLookup>
   switch (step.kind) {
     case "digital-write":
       return [`digitalWrite(${step.pin ? pinLiteral(step.pin) : helpers.pin(step.componentId)}, ${valueAsHighLow(step.value)});`];
+    case "pin-mode":
+      return [`pinMode(${pinLiteral(step.pin)}, ${step.mode});`];
     case "analog-write":
       return [`analogWrite(${step.pin ? pinLiteral(step.pin) : helpers.pin(step.componentId)}, ${step.value});`];
     case "delay":
       return [`delay(${Math.max(0, Math.round(step.ms))});`];
+    case "delay-microseconds":
+      return [`delayMicroseconds(${Math.max(0, Math.round(step.us))});`];
     case "serial-print":
       return [step.newline === false ? `Serial.print(${stringLiteral(step.value)});` : `Serial.println(${stringLiteral(step.value)});`];
     case "read-analog-serial": {
-      const component = helpers.getInstance(step.componentId);
+      const component = step.componentId ? helpers.getInstance(step.componentId) : undefined;
+      const sourcePin = String(step.pin ?? component?.pins.signal ?? "0");
       const label = step.label ?? component?.label ?? "analog";
       return [
         `Serial.print(${stringLiteral(`${label}: `)});`,
-        `Serial.println(analogRead(${pinLiteral(component?.pins.signal)}));`
+        `Serial.println(analogRead(${pinLiteral(sourcePin)}));`
       ];
     }
     case "read-digital-serial": {
-      const component = helpers.getInstance(step.componentId);
+      const component = step.componentId ? helpers.getInstance(step.componentId) : undefined;
+      const sourcePin = String(step.pin ?? component?.pins.signal ?? "0");
       const label = step.label ?? component?.label ?? "digital";
       return [
         `Serial.print(${stringLiteral(`${label}: `)});`,
-        `Serial.println(digitalRead(${pinLiteral(component?.pins.signal)}));`
+        `Serial.println(digitalRead(${pinLiteral(sourcePin)}));`
       ];
     }
+    case "digital-if-write":
+      return [
+        `if (digitalRead(${pinLiteral(step.inputPin)}) == ${step.expectedValue}) {`,
+        `  digitalWrite(${pinLiteral(step.outputPin)}, ${step.outputValue});`,
+        `}`
+      ];
     case "button-controls-led": {
       const buttonPin = helpers.pin(step.buttonId);
       const ledPin = helpers.pin(step.ledId);

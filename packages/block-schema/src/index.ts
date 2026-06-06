@@ -84,11 +84,14 @@ export type BlockDefinition = {
 
 export type ProgramStep =
   | { kind: "digital-write"; componentId?: string; pin?: PinValue; value: "HIGH" | "LOW" | boolean }
+  | { kind: "digital-if-write"; inputPin: PinValue; expectedValue: "HIGH" | "LOW"; outputPin: PinValue; outputValue: "HIGH" | "LOW" }
+  | { kind: "pin-mode"; pin: PinValue; mode: "INPUT" | "OUTPUT" | "INPUT_PULLUP"; }
   | { kind: "analog-write"; componentId?: string; pin?: PinValue; value: number | string }
   | { kind: "delay"; ms: number }
+  | { kind: "delay-microseconds"; us: number }
   | { kind: "serial-print"; value: string; newline?: boolean }
-  | { kind: "read-analog-serial"; componentId: string; label?: string }
-  | { kind: "read-digital-serial"; componentId: string; label?: string }
+  | { kind: "read-analog-serial"; componentId?: string; pin?: PinValue; label?: string }
+  | { kind: "read-digital-serial"; componentId?: string; pin?: PinValue; label?: string }
   | { kind: "button-controls-led"; buttonId: string; ledId: string }
   | { kind: "potentiometer-controls-servo"; potentiometerId: string; servoId: string }
   | { kind: "servo-write"; componentId: string; angle: number | string }
@@ -102,8 +105,10 @@ export type ProgramStep =
   | { kind: "relay-write"; componentId: string; value: "HIGH" | "LOW" | boolean }
   | { kind: "ir-read-serial"; componentId: string };
 
+export type ProjectSchemaVersion = "1.0.0" | "1.1.0";
+
 export type ProjectDocument = {
-  schemaVersion: "1.0.0";
+  schemaVersion: ProjectSchemaVersion;
   name: string;
   boardId: string;
   components: ComponentInstance[];
@@ -111,6 +116,42 @@ export type ProjectDocument = {
   blocksXml?: string;
   generatedSketch?: string;
   lessonId?: string;
+  dependencies?: string[];
+  pinAssignments?: PinAssignment[];
+  componentPlacement?: ComponentPlacement[];
+  connections?: CircuitConnection[];
+  simulationState?: SimulationState;
+};
+
+export type PinAssignment = {
+  id: string;
+  componentId: string;
+  pin: string;
+  boardPin: string;
+};
+
+export type ComponentPlacement = {
+  componentId: string;
+  x: number;
+  y: number;
+  rotation?: number;
+  layer?: "board" | "breadboard" | "three-d";
+};
+
+export type CircuitConnection = {
+  id: string;
+  componentId: string;
+  pin: string;
+  boardPin: string;
+};
+
+export type SimulationState = {
+  pinValues?: Record<string, PinValue>;
+  componentState?: Record<string, Record<string, PinValue>>;
+  serialLog?: string[];
+  running?: boolean;
+  stepIndex?: number;
+  delayRemainingMs?: number;
 };
 
 export type LessonStepAction = "build" | "wire" | "code" | "test" | "upload" | "reflect";

@@ -10,6 +10,18 @@ function numberValue(block: Blockly.Block, name: string, fallback: number): numb
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function pinValue(block: Blockly.Block, name: string, fallback: number | string): number | string {
+  const text = value(block, name).trim();
+  if (!text) return fallback;
+  const maybeNumber = Number(text);
+  return Number.isFinite(maybeNumber) ? maybeNumber : text;
+}
+
+function pinModeValue(value: string): "INPUT" | "OUTPUT" | "INPUT_PULLUP" {
+  if (value === "INPUT" || value === "OUTPUT" || value === "INPUT_PULLUP") return value;
+  return "INPUT";
+}
+
 function validComponent(id: string, components: ComponentInstance[]): boolean {
   return id !== "__missing__" && components.some((component) => component.id === id);
 }
@@ -20,8 +32,49 @@ function blockToSteps(block: Blockly.Block, components: ComponentInstance[]): Pr
       const componentId = value(block, "COMPONENT");
       return validComponent(componentId, components) ? [{ kind: "digital-write", componentId, value: value(block, "STATE") as "HIGH" | "LOW" }] : [];
     }
+    case "abl_digital_write_pin": {
+      return [{ kind: "digital-write", pin: pinValue(block, "PIN", 13), value: value(block, "STATE") as "HIGH" | "LOW" }];
+    }
+    case "abl_builtin_led_write":
+      return [{ kind: "digital-write", pin: 13, value: value(block, "STATE") as "HIGH" | "LOW" }];
+    case "abl_digital_read_pin": {
+      return [
+        {
+          kind: "read-digital-serial",
+          pin: pinValue(block, "PIN", 2),
+          label: value(block, "LABEL") || "digital"
+        }
+      ];
+    }
+    case "abl_analog_read_pin": {
+      return [
+        {
+          kind: "read-analog-serial",
+          pin: pinValue(block, "PIN", "A0"),
+          label: value(block, "LABEL") || "analog"
+        }
+      ];
+    }
+    case "abl_analog_write_pin": {
+      return [{ kind: "analog-write", pin: pinValue(block, "PIN", 3), value: numberValue(block, "VALUE", 128) }];
+    }
+    case "abl_pin_mode": {
+      return [{ kind: "pin-mode", pin: pinValue(block, "PIN", 2), mode: pinModeValue(value(block, "MODE")) }];
+    }
     case "abl_delay":
       return [{ kind: "delay", ms: numberValue(block, "MS", 1000) }];
+    case "abl_digital_if_write":
+      return [
+        {
+          kind: "digital-if-write",
+          inputPin: pinValue(block, "INPUT_PIN", 2),
+          expectedValue: value(block, "EXPECTED") === "LOW" ? "LOW" : "HIGH",
+          outputPin: pinValue(block, "OUTPUT_PIN", 13),
+          outputValue: value(block, "OUTPUT_VALUE") === "LOW" ? "LOW" : "HIGH"
+        }
+      ];
+    case "abl_delay_microseconds":
+      return [{ kind: "delay-microseconds", us: numberValue(block, "MICROSECONDS", 500) }];
     case "abl_button_led": {
       const buttonId = value(block, "BUTTON");
       const ledId = value(block, "LED");
@@ -94,11 +147,36 @@ function blockToSteps(block: Blockly.Block, components: ComponentInstance[]): Pr
     }
     case "abl_analog_serial": {
       const componentId = value(block, "SENSOR");
-      return validComponent(componentId, components) ? [{ kind: "read-analog-serial", componentId }] : [];
+      return validComponent(componentId, components)
+        ? [
+            {
+              kind: "read-analog-serial",
+              componentId,
+              label: value(block, "LABEL") || undefined
+            }
+          ]
+        : [];
     }
     case "abl_digital_serial": {
       const componentId = value(block, "SENSOR");
-      return validComponent(componentId, components) ? [{ kind: "read-digital-serial", componentId }] : [];
+      return validComponent(componentId, components)
+        ? [
+            {
+              kind: "read-digital-serial",
+              componentId,
+              label: value(block, "LABEL") || undefined
+            }
+          ]
+        : [];
+    }
+    case "abl_serial_print": {
+      return [
+        {
+          kind: "serial-print",
+          value: value(block, "VALUE") || "",
+          newline: value(block, "NEWLINE") !== "false"
+        }
+      ];
     }
     case "abl_ir_serial": {
       const componentId = value(block, "SENSOR");

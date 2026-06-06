@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Blockly from "blockly/core";
 import type { ComponentDefinition, ComponentInstance, ProgramStep } from "@abl/block-schema";
 import { registerArduinoBlocks, setBlocklyComponentDefinitionProvider, setBlocklyComponentProvider, toolbox } from "./blocklyBlocks";
@@ -49,6 +49,12 @@ const darkBlocklyTheme = Blockly.Theme.defineTheme("ablDark", {
   }
 });
 
+const emptyBlocklyXml = "<xml xmlns=\"https://developers.google.com/blockly/xml\"/>";
+
+function sanitizeBlocklyXml(rawXml: string): string {
+  return rawXml.trim() ? rawXml : emptyBlocklyXml;
+}
+
 function blocklyThemeFor(themePreference: ThemePreference) {
   return themePreference === "dark" ? darkBlocklyTheme : lightBlocklyTheme;
 }
@@ -57,6 +63,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
   const containerRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
   const loadingRef = useRef(false);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const componentsRef = useRef(components);
   const componentDefinitionsRef = useRef(componentDefinitions);
   componentsRef.current = components;
@@ -68,39 +75,51 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     registerArduinoBlocks();
     if (!containerRef.current) return;
     const compactWorkspace = window.matchMedia("(max-width: 620px)").matches;
-    const workspace = Blockly.inject(containerRef.current, {
-      toolbox,
-      trashcan: true,
-      scrollbars: true,
-      theme: blocklyThemeFor(themePreference),
-      grid: {
-        spacing: 24,
-        length: 2,
-        colour: themePreference === "dark" ? "#335875" : "#cddfe9",
-        snap: false
-      },
-      zoom: {
-        controls: true,
-        wheel: true,
-        startScale: compactWorkspace ? 0.6 : 0.92,
-        maxScale: 1.6,
-        minScale: 0.45
-      },
-      renderer: "zelos"
-    });
-    workspaceRef.current = workspace;
-    const listener = (event: Blockly.Events.Abstract) => {
-      if (loadingRef.current || event.isUiEvent) return;
-      const dom = Blockly.Xml.workspaceToDom(workspace);
-      const blocksXml = Blockly.Xml.domToText(dom);
-      onChange(workspaceToProgram(workspace, componentsRef.current), blocksXml);
-    };
-    workspace.addChangeListener(listener);
-    return () => {
-      workspace.removeChangeListener(listener);
-      workspace.dispose();
+    try {
+      const workspace = Blockly.inject(containerRef.current, {
+        toolbox: toolbox as Blockly.utils.toolbox.ToolboxDefinition,
+        trashcan: true,
+        scrollbars: true,
+        theme: blocklyThemeFor(themePreference),
+        grid: {
+          spacing: 24,
+          length: 2,
+          colour: themePreference === "dark" ? "#335875" : "#cddfe9",
+          snap: false
+        },
+        zoom: {
+          controls: true,
+          wheel: true,
+          startScale: compactWorkspace ? 0.6 : 0.92,
+          maxScale: 1.6,
+          minScale: 0.45
+        },
+        renderer: "zelos"
+      });
+      workspaceRef.current = workspace;
+      const listener = (event: Blockly.Events.Abstract) => {
+        if (loadingRef.current || event.isUiEvent) return;
+        try {
+          const dom = Blockly.Xml.workspaceToDom(workspace);
+          const blocksXml = Blockly.Xml.domToText(dom);
+          onChange(workspaceToProgram(workspace, componentsRef.current), blocksXml);
+        } catch (error) {
+          console.error("Unable to sync workspace changes", error);
+        }
+      };
+      workspace.addChangeListener(listener);
+      setWorkspaceError(null);
+      return () => {
+        workspace.removeChangeListener(listener);
+        workspace.dispose();
+        workspaceRef.current = null;
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create Blockly workspace.";
+      setWorkspaceError(message);
+      console.error("Unable to initialize Blockly", error);
       workspaceRef.current = null;
-    };
+    }
   }, [onChange]);
 
   useEffect(() => {
@@ -109,9 +128,13 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     loadingRef.current = true;
     workspace.clear();
     try {
-      const dom = Blockly.utils.xml.textToDom(xml);
+      const dom = Blockly.utils.xml.textToDom(sanitizeBlocklyXml(xml));
       Blockly.Xml.domToWorkspace(dom, workspace);
       onChange(workspaceToProgram(workspace, componentsRef.current), Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace)));
+    } catch (error) {
+      console.error("Failed to load Blockly XML. Falling back to empty canvas.", error);
+      workspace.clear();
+      onChange([], emptyBlocklyXml);
     } finally {
       loadingRef.current = false;
     }
@@ -125,11 +148,25 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     workspaceRef.current?.setTheme(blocklyThemeFor(themePreference));
   }, [themePreference]);
 
+  if (workspaceError) {
+    return (
+      <section className="block-studio block-studio-error" aria-live="polite">
+        <div className="block-studio-header">
+          <div>
+            <span>Blockly</span>
+            <strong>Workspace temporarily unavailable</strong>
+          </div>
+        </div>
+        <div className="block-studio-canvas blockly-workspace-error">{workspaceError}</div>
+      </section>
+    );
+  }
+
   return (
     <div className="block-studio">
       <div className="block-studio-header">
         <div>
-          <span>Word Blocks</span>
+          <span>Blocks</span>
           <strong>Arduino canvas</strong>
         </div>
         <div className="block-studio-pills" aria-label="Block editor status">

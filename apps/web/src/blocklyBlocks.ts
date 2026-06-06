@@ -1,20 +1,41 @@
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import type { ComponentDefinition, ComponentInstance } from "@abl/block-schema";
-import { components as defaultComponents } from "@abl/catalog";
-
-let componentProvider = (): ComponentInstance[] => [];
-let componentDefinitionProvider = (): ComponentDefinition[] => defaultComponents;
-let registered = false;
 
 type Option = [string, string];
+
+let componentProvider = () => [] as ComponentInstance[];
+let componentDefinitionProvider = () => [] as ComponentDefinition[];
+let registered = false;
 
 const blockColours = {
   io: "#ef3e7a",
   sensors: "#12a988",
   motion: "#4f86f7",
   displays: "#8f5cf7",
-  timing: "#78a841"
+  timing: "#78a841",
+  serial: "#f6a31e"
+};
+
+type ToolboxBlockItem = {
+  kind: "block";
+  type: string;
+};
+
+type StyledToolboxCategory = {
+  kind: "category";
+  name: string;
+  colour: string;
+  cssConfig: {
+    row: string;
+    icon: string;
+  };
+  contents: ToolboxBlockItem[];
+};
+
+type StyledToolbox = {
+  kind: "categoryToolbox";
+  contents: StyledToolboxCategory[];
 };
 
 function categoryCss(tone: keyof typeof blockColours) {
@@ -24,23 +45,25 @@ function categoryCss(tone: keyof typeof blockColours) {
   };
 }
 
-export const toolbox = {
+export const toolbox: StyledToolbox = {
   kind: "categoryToolbox",
   contents: [
     {
       kind: "category",
-      name: "Input/Output",
+      name: "Input / Output",
       colour: blockColours.io,
       cssConfig: categoryCss("io"),
       contents: [
         { kind: "block", type: "abl_led_write" },
-        { kind: "block", type: "abl_rgb_color" },
-        { kind: "block", type: "abl_neopixel_color" },
-        { kind: "block", type: "abl_buzzer_tone" },
+        { kind: "block", type: "abl_digital_write_pin" },
+        { kind: "block", type: "abl_analog_write_pin" },
+        { kind: "block", type: "abl_builtin_led_write" },
+        { kind: "block", type: "abl_digital_if_write" },
+        { kind: "block", type: "abl_pin_mode" },
         { kind: "block", type: "abl_relay_write" },
-        { kind: "block", type: "abl_button_led" },
-        { kind: "block", type: "abl_analog_serial" },
-        { kind: "block", type: "abl_digital_serial" }
+        { kind: "block", type: "abl_buzzer_tone" },
+        { kind: "block", type: "abl_rgb_color" },
+        { kind: "block", type: "abl_neopixel_color" }
       ]
     },
     {
@@ -50,12 +73,8 @@ export const toolbox = {
       cssConfig: categoryCss("sensors"),
       contents: [
         { kind: "block", type: "abl_button_led" },
-        { kind: "block", type: "abl_pot_servo" },
-        { kind: "block", type: "abl_ultrasonic_serial" },
-        { kind: "block", type: "abl_dht_serial" },
-        { kind: "block", type: "abl_analog_serial" },
-        { kind: "block", type: "abl_digital_serial" },
-        { kind: "block", type: "abl_ir_serial" }
+        { kind: "block", type: "abl_digital_read_pin" },
+        { kind: "block", type: "abl_analog_read_pin" }
       ]
     },
     {
@@ -83,7 +102,24 @@ export const toolbox = {
       name: "Timing",
       colour: blockColours.timing,
       cssConfig: categoryCss("timing"),
-      contents: [{ kind: "block", type: "abl_delay" }]
+      contents: [
+        { kind: "block", type: "abl_delay" },
+        { kind: "block", type: "abl_delay_microseconds" }
+      ]
+    },
+    {
+      kind: "category",
+      name: "Serial",
+      colour: blockColours.serial,
+      cssConfig: categoryCss("serial"),
+      contents: [
+        { kind: "block", type: "abl_serial_print" },
+        { kind: "block", type: "abl_analog_serial" },
+        { kind: "block", type: "abl_digital_serial" },
+        { kind: "block", type: "abl_ultrasonic_serial" },
+        { kind: "block", type: "abl_dht_serial" },
+        { kind: "block", type: "abl_ir_serial" }
+      ]
     }
   ]
 };
@@ -104,11 +140,6 @@ function componentOptions(componentIds: string[]): Option[] {
   return options.length > 0 ? options : [["Add component first", "__missing__"]];
 }
 
-function componentsByCategory(categories: string[]): Option[] {
-  const ids = componentDefinitionProvider().filter((component) => categories.includes(component.category)).map((component) => component.id);
-  return componentOptions(ids);
-}
-
 function componentsMatching(predicate: (component: ComponentDefinition) => boolean): Option[] {
   const ids = componentDefinitionProvider().filter(predicate).map((component) => component.id);
   return componentOptions(ids);
@@ -120,6 +151,10 @@ function signalPinLabel(component: ComponentDefinition) {
 
 function numberField(value: number, min = 0, max = 1023) {
   return new Blockly.FieldNumber(value, min, max, 1);
+}
+
+function pinField(value: string | number = "13") {
+  return new Blockly.FieldTextInput(String(value));
 }
 
 function statement(block: Blockly.Block, colour: string) {
@@ -140,8 +175,88 @@ export function registerArduinoBlocks() {
         .appendField("set")
         .appendField(new Blockly.FieldDropdown(() => componentOptions(["led"])), "COMPONENT")
         .appendField("to")
-        .appendField(new Blockly.FieldDropdown([["on", "HIGH"], ["off", "LOW"]]), "STATE");
+        .appendField(new Blockly.FieldDropdown([ ["on", "HIGH"], ["off", "LOW"] ]), "STATE");
       statement(this, blockColours.io);
+    }
+  };
+
+  Blockly.Blocks.abl_digital_write_pin = {
+    init() {
+      this.appendDummyInput()
+        .appendField("set pin")
+        .appendField(pinField("13"), "PIN")
+        .appendField("to")
+        .appendField(new Blockly.FieldDropdown([ ["on", "HIGH"], ["off", "LOW"] ]), "STATE");
+      statement(this, blockColours.io);
+    }
+  };
+
+  Blockly.Blocks.abl_analog_write_pin = {
+    init() {
+      this.appendDummyInput()
+        .appendField("set pin")
+        .appendField(pinField("3"), "PIN")
+        .appendField("to PWM")
+        .appendField(numberField(128, 0, 255), "VALUE");
+      statement(this, blockColours.io);
+    }
+  };
+
+  Blockly.Blocks.abl_builtin_led_write = {
+    init() {
+      this.appendDummyInput()
+        .appendField("set built-in LED")
+        .appendField(new Blockly.FieldDropdown([ ["on", "HIGH"], ["off", "LOW"] ]), "STATE");
+      statement(this, blockColours.io);
+    }
+  };
+
+  Blockly.Blocks.abl_digital_if_write = {
+    init() {
+      this.appendDummyInput()
+        .appendField("if")
+        .appendField(pinField("2"), "INPUT_PIN")
+        .appendField("is")
+        .appendField(new Blockly.FieldDropdown([ ["high", "HIGH"], ["low", "LOW"] ]), "EXPECTED")
+        .appendField("then")
+        .appendField("set")
+        .appendField(pinField("13"), "OUTPUT_PIN")
+        .appendField("to")
+        .appendField(new Blockly.FieldDropdown([ ["on", "HIGH"], ["off", "LOW"] ]), "OUTPUT_VALUE");
+      statement(this, blockColours.io);
+    }
+  };
+
+  Blockly.Blocks.abl_pin_mode = {
+    init() {
+      this.appendDummyInput()
+        .appendField("set pin")
+        .appendField(pinField("2"), "PIN")
+        .appendField("mode")
+        .appendField(new Blockly.FieldDropdown([ ["INPUT", "INPUT"], ["OUTPUT", "OUTPUT"], ["INPUT_PULLUP", "INPUT_PULLUP"] ]), "MODE");
+      statement(this, blockColours.io);
+    }
+  };
+
+  Blockly.Blocks.abl_digital_read_pin = {
+    init() {
+      this.appendDummyInput()
+        .appendField("print digital pin")
+        .appendField(pinField("2"), "PIN")
+        .appendField("as")
+        .appendField(new Blockly.FieldTextInput("button"), "LABEL");
+      statement(this, blockColours.sensors);
+    }
+  };
+
+  Blockly.Blocks.abl_analog_read_pin = {
+    init() {
+      this.appendDummyInput()
+        .appendField("print analog pin")
+        .appendField(pinField("A0"), "PIN")
+        .appendField("as")
+        .appendField(new Blockly.FieldTextInput("potentiometer"), "LABEL");
+      statement(this, blockColours.sensors);
     }
   };
 
@@ -206,6 +321,13 @@ export function registerArduinoBlocks() {
     }
   };
 
+  Blockly.Blocks.abl_delay_microseconds = {
+    init() {
+      this.appendDummyInput().appendField("wait").appendField(numberField(500, 1, 100000), "MICROSECONDS").appendField("µs");
+      statement(this, blockColours.timing);
+    }
+  };
+
   Blockly.Blocks.abl_button_led = {
     init() {
       this.appendDummyInput()
@@ -233,7 +355,7 @@ export function registerArduinoBlocks() {
       this.appendDummyInput()
         .appendField("print distance from")
         .appendField(new Blockly.FieldDropdown(() => componentOptions(["ultrasonic-hcsr04"])), "SENSOR");
-      statement(this, blockColours.sensors);
+      statement(this, blockColours.serial);
     }
   };
 
@@ -242,7 +364,7 @@ export function registerArduinoBlocks() {
       this.appendDummyInput()
         .appendField("print weather from")
         .appendField(new Blockly.FieldDropdown(() => componentOptions(["dht11", "dht22"])), "SENSOR");
-      statement(this, blockColours.sensors);
+      statement(this, blockColours.serial);
     }
   };
 
@@ -252,11 +374,13 @@ export function registerArduinoBlocks() {
         .appendField("print analog")
         .appendField(
           new Blockly.FieldDropdown(() =>
-            componentsMatching((component) => signalPinLabel(component).includes("analog") || String(component.defaultPins.signal ?? "").startsWith("A"))
+            componentsMatching((component) => signalPinLabel(component).includes("analog") || String(component.defaultPins.signal ?? "").startsWith("A") || String(component.defaultPins.signal ?? "").includes("A"))
           ),
           "SENSOR"
-        );
-      statement(this, blockColours.sensors);
+        )
+        .appendField("as")
+        .appendField(new Blockly.FieldTextInput("light"), "LABEL");
+      statement(this, blockColours.serial);
     }
   };
 
@@ -269,8 +393,10 @@ export function registerArduinoBlocks() {
             componentsMatching((component) => signalPinLabel(component).includes("digital") || typeof component.defaultPins.signal === "number")
           ),
           "SENSOR"
-        );
-      statement(this, blockColours.sensors);
+        )
+        .appendField("as")
+        .appendField(new Blockly.FieldTextInput("button"), "LABEL");
+      statement(this, blockColours.serial);
     }
   };
 
@@ -279,7 +405,7 @@ export function registerArduinoBlocks() {
       this.appendDummyInput()
         .appendField("print IR code from")
         .appendField(new Blockly.FieldDropdown(() => componentOptions(["ir-receiver"])), "SENSOR");
-      statement(this, blockColours.sensors);
+      statement(this, blockColours.serial);
     }
   };
 
@@ -315,4 +441,16 @@ export function registerArduinoBlocks() {
       statement(this, blockColours.displays);
     }
   };
+
+  Blockly.Blocks.abl_serial_print = {
+    init() {
+      this.appendDummyInput()
+        .appendField("print text")
+        .appendField(new Blockly.FieldTextInput("hello"), "VALUE")
+        .appendField("newline")
+        .appendField(new Blockly.FieldDropdown([ ["yes", "true"], ["no", "false"] ]), "NEWLINE");
+      statement(this, blockColours.serial);
+    }
+  };
+
 }
