@@ -89,7 +89,7 @@ import { createUnitPlan, createUnitPlanMarkdown, unitPlanFilename } from "./unit
 
 type Mode = "blocks" | "code" | "circuit" | "lessons";
 type CodeView = "cpp" | "python" | "javascript";
-type ProjectStyle = "icon" | "word" | "code";
+type ProjectStyle = "icon" | "blocks" | "code";
 
 type StarterCard = {
   id: string;
@@ -134,7 +134,7 @@ const projectStyleOptions: Array<{
     detail: "Start with guided starter blocks and friendly visual cues."
   },
   {
-    id: "word",
+    id: "blocks",
     title: "Blocks",
     kicker: "scratch-style",
     detail: "Build with full Blockly blocks and live Arduino C++."
@@ -436,10 +436,10 @@ export default function App() {
   const [shareStatus, setShareStatus] = useState(() => (loadSharedProject() ? "Shared link loaded" : "Share link ready"));
   const [mode, setMode] = useState<Mode>("blocks");
   const [codeView, setCodeView] = useState<CodeView>("cpp");
-  const [projectStyle, setProjectStyle] = useState<ProjectStyle>("word");
+  const [projectStyle, setProjectStyle] = useState<ProjectStyle>("blocks");
   const [landingOpen, setLandingOpen] = useState(shouldShowLandingPage);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
-  const [newProjectStyle, setNewProjectStyle] = useState<ProjectStyle>("word");
+  const [newProjectStyle, setNewProjectStyle] = useState<ProjectStyle>("blocks");
   const [agentSetupOpen, setAgentSetupOpen] = useState(false);
   const [agentSetupPlatform, setAgentSetupPlatform] = useState<AgentSetupPlatform>("mac");
   const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
@@ -665,7 +665,7 @@ export default function App() {
           ? `${wiringCanvas.summary.warning} warning${wiringCanvas.summary.warning === 1 ? "" : "s"}`
           : `${wiringCanvas.summary.total} ready`;
   const activeStyleOption = projectStyleOptions.find((option) => option.id === projectStyle) ?? {
-    id: "word",
+    id: "blocks",
     title: "Blocks",
     kicker: "scratch-style",
     detail: "Build with full Blockly blocks and live Arduino C++."
@@ -871,7 +871,7 @@ export default function App() {
   }
 
   function loadIdeaProject(idea: ProjectIdea) {
-    const nextStyle = projectStyle === "code" ? "word" : projectStyle;
+    const nextStyle = projectStyle === "code" ? "blocks" : projectStyle;
     loadProject(idea.project, nextStyle);
     if (mode !== "circuit") setMode("blocks");
     setAgentLog((current) => [`Idea loaded: ${idea.title}.`, ...current]);
@@ -1346,7 +1346,7 @@ export default function App() {
       return;
     }
     if (nextMode === "blocks" && projectStyle === "code") {
-      setProjectStyle("word");
+      setProjectStyle("blocks");
     }
     setMode(nextMode);
   }
@@ -1384,7 +1384,7 @@ export default function App() {
               className={mode === "blocks" ? "active" : ""}
               onClick={() => {
                 setMode("blocks");
-                if (projectStyle === "code") setProjectStyle("word");
+                if (projectStyle === "code") setProjectStyle("blocks");
               }}
             >
               <SquareStack size={18} />
@@ -1486,7 +1486,7 @@ export default function App() {
               title={option.title}
             >
               {option.id === "code" ? <Code2 size={15} /> : <SquareStack size={15} />}
-              <span>{option.id === "icon" ? "Icon" : option.id === "word" ? "Blocks" : "Code"}</span>
+              <span>{option.id === "icon" ? "Icon" : option.id === "blocks" ? "Blocks" : "Code"}</span>
             </button>
           ))}
         </div>
