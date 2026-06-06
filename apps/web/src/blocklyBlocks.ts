@@ -17,6 +17,13 @@ const blockColours = {
   timing: "#78a841"
 };
 
+function categoryCss(tone: keyof typeof blockColours) {
+  return {
+    row: `blocklyToolboxCategory abl-category-${tone}`,
+    icon: `blocklyToolboxCategoryIcon abl-toolbox-icon abl-toolbox-icon-${tone}`
+  };
+}
+
 export const toolbox = {
   kind: "categoryToolbox",
   contents: [
@@ -24,6 +31,7 @@ export const toolbox = {
       kind: "category",
       name: "Input/Output",
       colour: blockColours.io,
+      cssConfig: categoryCss("io"),
       contents: [
         { kind: "block", type: "abl_led_write" },
         { kind: "block", type: "abl_rgb_color" },
@@ -39,6 +47,7 @@ export const toolbox = {
       kind: "category",
       name: "Sensors",
       colour: blockColours.sensors,
+      cssConfig: categoryCss("sensors"),
       contents: [
         { kind: "block", type: "abl_button_led" },
         { kind: "block", type: "abl_pot_servo" },
@@ -53,6 +62,7 @@ export const toolbox = {
       kind: "category",
       name: "Motion",
       colour: blockColours.motion,
+      cssConfig: categoryCss("motion"),
       contents: [
         { kind: "block", type: "abl_servo_write" },
         { kind: "block", type: "abl_pot_servo" }
@@ -62,6 +72,7 @@ export const toolbox = {
       kind: "category",
       name: "Displays",
       colour: blockColours.displays,
+      cssConfig: categoryCss("displays"),
       contents: [
         { kind: "block", type: "abl_lcd_print" },
         { kind: "block", type: "abl_oled_print" }
@@ -71,6 +82,7 @@ export const toolbox = {
       kind: "category",
       name: "Timing",
       colour: blockColours.timing,
+      cssConfig: categoryCss("timing"),
       contents: [{ kind: "block", type: "abl_delay" }]
     }
   ]

@@ -82,6 +82,70 @@ body {
   color: var(--ink);
 }
 
+.app-crash-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--page-wash);
+}
+
+.app-crash-card {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.app-crash-card span {
+  color: var(--deep-blue);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.app-crash-card h1,
+.app-crash-card p {
+  margin: 0;
+}
+
+.app-crash-card h1 {
+  color: var(--heading);
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.app-crash-card p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.app-crash-card pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--coral-ink);
+  white-space: pre-wrap;
+}
+
+.app-crash-card button {
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--soft-blue);
+  color: var(--heading);
+  font-weight: 800;
+}
+
 button,
 select,
 input {
@@ -1276,6 +1340,50 @@ button:disabled {
   font-size: 15px !important;
   font-weight: 850;
   line-height: 1.1;
+}
+
+.blockly-host .abl-category-io {
+  --abl-category-color: #ef3e7a;
+}
+
+.blockly-host .abl-category-sensors {
+  --abl-category-color: #12a988;
+}
+
+.blockly-host .abl-category-motion {
+  --abl-category-color: #4f86f7;
+}
+
+.blockly-host .abl-category-displays {
+  --abl-category-color: #8f5cf7;
+}
+
+.blockly-host .abl-category-timing {
+  --abl-category-color: #78a841;
+}
+
+.blockly-host .abl-toolbox-icon::before {
+  content: "";
+}
+
+.blockly-host .abl-toolbox-icon-io::before {
+  content: "I/O";
+}
+
+.blockly-host .abl-toolbox-icon-sensors::before {
+  content: "S";
+}
+
+.blockly-host .abl-toolbox-icon-motion::before {
+  content: "M";
+}
+
+.blockly-host .abl-toolbox-icon-displays::before {
+  content: "LCD";
+}
+
+.blockly-host .abl-toolbox-icon-timing::before {
+  content: "ms";
 }
 
 .blockly-host .blocklyTreeRow {

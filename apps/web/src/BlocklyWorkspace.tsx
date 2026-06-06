@@ -14,50 +14,6 @@ type Props = {
   onChange: (program: ProgramStep[], blocksXml: string) => void;
 };
 
-const toolboxChrome: Record<string, { shortLabel: string; color: string }> = {
-  "Input/Output": { shortLabel: "I/O", color: "#ef3e7a" },
-  Sensors: { shortLabel: "S", color: "#12a988" },
-  Motion: { shortLabel: "M", color: "#4f86f7" },
-  Displays: { shortLabel: "LCD", color: "#8f5cf7" },
-  Timing: { shortLabel: "ms", color: "#78a841" },
-  Output: { shortLabel: "O", color: "#ef3e7a" },
-  Input: { shortLabel: "I", color: "#12a988" },
-  Display: { shortLabel: "D", color: "#8f5cf7" }
-};
-
-function polishToolbox(container: HTMLDivElement | null) {
-  const toolboxDiv = container?.querySelector(".blocklyToolbox, .blocklyToolboxDiv");
-  if (!toolboxDiv) return;
-
-  const modernRows = toolboxDiv.querySelectorAll<HTMLElement>(".blocklyToolboxCategory");
-  modernRows.forEach((row) => {
-    const label = row.querySelector<HTMLElement>(".blocklyToolboxCategoryLabel")?.textContent?.trim();
-    if (!label) return;
-    const chrome = toolboxChrome[label] ?? { shortLabel: label.slice(0, 2).toUpperCase(), color: "#14a8e0" };
-    row.dataset.ablCategory = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    row.style.setProperty("--abl-category-color", chrome.color);
-    const icon = row.querySelector<HTMLElement>(".blocklyToolboxCategoryIcon");
-    if (!icon) return;
-    icon.classList.add("abl-toolbox-icon");
-    icon.textContent = chrome.shortLabel;
-    icon.style.setProperty("--abl-category-color", chrome.color);
-    icon.setAttribute("aria-hidden", "true");
-  });
-
-  toolboxDiv.querySelectorAll<HTMLElement>(".blocklyTreeRow").forEach((row) => {
-    const label = row.querySelector<HTMLElement>(".blocklyTreeLabel")?.textContent?.trim();
-    if (!label || row.querySelector(".abl-toolbox-icon")) return;
-    const chrome = toolboxChrome[label] ?? { shortLabel: label.slice(0, 2).toUpperCase(), color: "#14a8e0" };
-    row.dataset.ablCategory = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    row.style.setProperty("--abl-category-color", chrome.color);
-    const icon = document.createElement("span");
-    icon.className = "abl-toolbox-icon";
-    icon.textContent = chrome.shortLabel;
-    icon.setAttribute("aria-hidden", "true");
-    row.insertBefore(icon, row.firstChild);
-  });
-}
-
 const lightBlocklyTheme = Blockly.Theme.defineTheme("ablLight", {
   name: "ablLight",
   base: Blockly.Themes.Zelos,
@@ -133,7 +89,6 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       renderer: "zelos"
     });
     workspaceRef.current = workspace;
-    window.requestAnimationFrame(() => polishToolbox(containerRef.current));
     const listener = (event: Blockly.Events.Abstract) => {
       if (loadingRef.current || event.isUiEvent) return;
       const dom = Blockly.Xml.workspaceToDom(workspace);
@@ -164,7 +119,6 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
 
   useEffect(() => {
     workspaceRef.current?.refreshToolboxSelection();
-    window.requestAnimationFrame(() => polishToolbox(containerRef.current));
   }, [components, componentDefinitions]);
 
   useEffect(() => {
