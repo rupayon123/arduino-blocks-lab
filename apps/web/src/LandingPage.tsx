@@ -14,43 +14,6 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
   return (
     <main className="landing-shell">
       <section className="landing-hero" aria-labelledby="landing-title">
-        <div className="landing-scene" aria-hidden="true">
-          <div className="landing-bubble bubble-blocks">
-            <SquareStack size={20} />
-            <span>Blocks</span>
-          </div>
-          <div className="landing-bubble bubble-code">
-            <Code2 size={20} />
-            <span>C++</span>
-          </div>
-          <div className="landing-bubble bubble-usb">
-            <Cable size={20} />
-            <span>USB</span>
-          </div>
-          <div className="landing-device">
-            <div className="landing-board">
-              <span />
-              <span />
-              <strong>Arduino</strong>
-            </div>
-            <div className="landing-wire wire-a" />
-            <div className="landing-wire wire-b" />
-            <div className="landing-breadboard">
-              <span />
-              <span />
-              <span />
-              <strong>Breadboard</strong>
-            </div>
-            <div className="landing-sensor sensor-one">LED</div>
-            <div className="landing-sensor sensor-two">DHT</div>
-          </div>
-          <div className="landing-code-card">
-            <span>void loop()</span>
-            <span>digitalWrite(LED, HIGH);</span>
-            <span>delay(1000);</span>
-          </div>
-        </div>
-
         <nav className="landing-nav" aria-label="Landing navigation">
           <div className="landing-brand">
             <span className="landing-brand-mark">
@@ -58,27 +21,83 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
             </span>
             <strong>Arduino Blocks Lab</strong>
           </div>
-          <button onClick={onStart}>Open app</button>
+          <button onClick={onStart}>Open workspace</button>
         </nav>
 
-        <div className="landing-hero-copy">
-          <span className="landing-kicker">
-            <Sparkles size={16} />
-            Blocks to real boards
-          </span>
-          <h1 id="landing-title">Arduino Blocks Lab</h1>
-          <p>
-            A playful block coding studio for Arduino that lets students start visually, inspect the generated C++, plan wiring, and move toward real uploads.
-          </p>
-          <div className="landing-actions">
-            <button className="landing-primary" onClick={onStart}>
-              <Play size={18} />
-              Start building
-            </button>
-            <button className="landing-secondary" onClick={onOpenCircuit}>
-              <CircuitBoard size={18} />
-              Preview circuits
-            </button>
+        <div className="landing-hero-layout">
+          <div className="landing-hero-copy">
+            <span className="landing-kicker">
+              <Sparkles size={16} />
+              Kid-first block coding for real Arduino boards
+            </span>
+            <h1 id="landing-title">Learn by building. Build by coding. Code by uploading.</h1>
+            <p>
+              A playful, guided Blockly environment inspired by LEGO-style simplicity. Start with blocks, inspect generated
+              C++, test ideas quickly, then flash real hardware with confidence.
+            </p>
+            <div className="landing-actions">
+              <button className="landing-primary" onClick={onStart}>
+                <Play size={18} />
+                Start building
+              </button>
+              <button className="landing-secondary" onClick={onOpenCode}>
+                <Code2 size={18} />
+                See Arduino C++
+              </button>
+            </div>
+            <ul className="landing-trust-line">
+              <li>
+                <Cable size={16} />
+                Connect and upload to Uno / Nano / Mega
+              </li>
+              <li>
+                <CircuitBoard size={16} />
+                Visual wiring and project checks before hardware
+              </li>
+              <li>
+                <Sparkles size={16} />
+                Learn faster with lessons, templates, and live hints
+              </li>
+            </ul>
+          </div>
+
+          <div className="landing-scene" aria-hidden="true">
+            <div className="landing-bubble bubble-blocks">
+              <SquareStack size={18} />
+              <span>Blocks</span>
+            </div>
+            <div className="landing-bubble bubble-code">
+              <Code2 size={18} />
+              <span>C++</span>
+            </div>
+            <div className="landing-bubble bubble-usb">
+              <Cable size={18} />
+              <span>Upload</span>
+            </div>
+
+            <article className="landing-preview-card">
+              <header>
+                <span>Starter Project</span>
+                <strong>Blink</strong>
+              </header>
+              <p>One minute to get your first LED blinking.</p>
+              <ol>
+                <li>Build blocks</li>
+                <li>Review generated code</li>
+                <li>Compile and flash</li>
+              </ol>
+            </article>
+
+            <article className="landing-preview-card">
+              <header>
+                <span>Circuit Studio</span>
+                <strong>Visual wiring</strong>
+              </header>
+              <p>Use guided wiring checks before touching your breadboard.</p>
+              <div className="landing-orbit" aria-label="workflow">
+                Block → Code → Test → Upload
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -102,22 +121,22 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
           <button onClick={onStart}>
             <SquareStack size={22} />
             <strong>Blocks</strong>
-            <span>Build starter programs with colorful Arduino blocks.</span>
+            <span>Build with beginner-friendly programming blocks.</span>
           </button>
           <button onClick={onOpenCode}>
             <Code2 size={22} />
             <strong>Arduino C++</strong>
-            <span>See the real sketch update as projects change.</span>
+            <span>Inspect and copy live generated code for uploads.</span>
           </button>
           <button onClick={onOpenCircuit}>
             <CircuitBoard size={22} />
             <strong>Circuit Studio</strong>
-            <span>Check wiring plans before touching the breadboard.</span>
+            <span>View wiring, detect issues, and get setup guidance.</span>
           </button>
           <button onClick={onOpenLessons}>
             <Gauge size={22} />
             <strong>Lessons</strong>
-            <span>Follow beginner missions with classroom-friendly steps.</span>
+            <span>Follow guided missions from beginner to advanced.</span>
           </button>
         </div>
       </section>
