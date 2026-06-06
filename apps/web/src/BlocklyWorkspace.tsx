@@ -115,7 +115,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     } finally {
       loadingRef.current = false;
     }
-  }, [reloadKey, xml, onChange]);
+  }, [reloadKey, onChange]);
 
   useEffect(() => {
     workspaceRef.current?.refreshToolboxSelection();

@@ -2,6 +2,15 @@
 
 Open-source Arduino block coding, inspired by the friendliness of LEGO SPIKE and styled around bright Arduino blue.
 
+## Main goal
+
+Make Arduino Blocks Lab the easiest way for students and makers to go from visual blocks to real Arduino uploads.
+
+- match the onboarding clarity of LEGO SPIKE for first-time builders,
+- keep generated Arduino C++ transparent and editable at every stage,
+- keep all real uploads on the local machine with Arduino CLI for reliability and trust,
+- scale to more boards, more sensors, and more lesson tracks without forcing platform lock-in.
+
 ## What is included
 
 - React + Vite web app with Blockly, live Arduino C++ output, guided lesson sheets, teacher unit plans, project coach checklist, visual wiring canvas, printable build guides, auto pin planning, shareable project links, upload readiness checks, autosave, and project save/load.
@@ -64,6 +73,33 @@ npm run agent
 The launcher installs missing npm packages on first run, checks for Arduino CLI, and starts the agent. Open `http://127.0.0.1:47631/` to see the local status page. The agent exposes a localhost API only. It lets the hosted web app add Boards Manager package URLs, detect boards, search Arduino CLI board targets, prepare cores and libraries, compile, upload, and open the serial monitor.
 
 More setup detail is in `docs/agent-setup.md`.
+
+## Real-device readiness check
+
+This repository is already wired for actual upload testing. The blocker is your machine setup, not the web flow.
+
+- `arduino-cli` must be installed and on `PATH` (`arduino-cli version`).
+- The local agent must be running (`npm run agent`).
+- A compatible Arduino should be connected and detected by `arduino-cli board list`.
+- For USB uploads, select the detected port in the Board panel.
+
+If those checks pass, you can go from a blocks project to compile/upload in one flow:
+
+1. Open project (for example Blink).
+2. Set board to Uno/Nano/Mega in the board picker.
+3. Click compile.
+4. Click upload and choose your detected serial port.
+5. Open monitor for runtime feedback.
+
+Current local status: `arduino-cli` is missing on this machine, so compile/upload cannot run yet until installed.
+
+Run the preflight command after agent startup to confirm you can flash real hardware:
+
+```bash
+npm run agent:preflight
+```
+
+When it prints `READY_FOR_REAL_UPLOAD_TEST=1`, your machine is ready for a real upload test.
 
 ## Test it
 

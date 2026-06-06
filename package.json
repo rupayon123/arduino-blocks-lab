@@ -18,6 +18,7 @@
     "dev:web": "npm run dev -w @abl/web",
     "dev:agent": "npm run dev -w @abl/agent",
     "agent": "node scripts/launch-agent.mjs",
+    "agent:preflight": "node scripts/agent-preflight.mjs",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",

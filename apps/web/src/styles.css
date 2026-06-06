@@ -2378,6 +2378,35 @@ button:disabled {
   gap: 14px;
 }
 
+.circuit-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.circuit-view-tabs button {
+  height: 34px;
+  min-width: 0;
+  border-radius: 8px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.circuit-view-tabs button.active {
+  border-color: var(--deep-blue);
+  background: color-mix(in srgb, var(--soft-blue) 58%, transparent);
+}
+
 .circuit-stage {
   position: relative;
   min-height: 455px;
@@ -2389,6 +2418,38 @@ button:disabled {
     radial-gradient(circle at 72% 24%, color-mix(in srgb, var(--amber) 20%, transparent), transparent 28%),
     color-mix(in srgb, var(--field) 82%, var(--soft-blue));
   perspective: 900px;
+}
+
+.circuit-stage.board .breadboard-model,
+.circuit-stage.board .circuit-breadboard-only {
+  opacity: 0.5;
+}
+
+.circuit-stage.breadboard .arduino-model,
+.circuit-stage.breadboard .circuit-floor,
+.circuit-stage.breadboard .circuit-wire-overlay {
+  opacity: 0.48;
+}
+
+.circuit-stage.bench .circuit-wire,
+.circuit-stage.bench .component-model,
+.circuit-stage.bench .breadboard-model {
+  opacity: 0.55;
+}
+
+.circuit-floor-label {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  z-index: 4;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--blue) 58%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--soft-blue) 72%, transparent);
+  color: var(--heading);
+  font-size: 11px;
+  font-weight: 760;
 }
 
 .circuit-floor {
@@ -2630,6 +2691,106 @@ html[data-theme="dark"] .breadboard-model {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
+}
+
+.virtual-bench-console,
+.circuit-card--bench-single .circuit-bench-picker,
+.code-trace-block,
+.circuit-event-list,
+.virtual-event-list,
+.bench-readout-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.virtual-bench-console {
+  grid-template-columns: auto auto;
+  align-items: center;
+}
+
+.virtual-bench-console button {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.code-trace-block {
+  margin-top: 8px;
+}
+
+.code-trace-block .circuit-card-heading {
+  margin-bottom: 4px;
+}
+
+.virtual-event-list {
+  max-height: 190px;
+  overflow: auto;
+}
+
+.virtual-event-line {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.virtual-event-line svg {
+  margin-top: 1px;
+  color: var(--deep-blue);
+}
+
+.virtual-event-line p {
+  margin: 0;
+}
+
+.virtual-event-line p strong {
+  color: var(--ink);
+}
+
+.circuit-code-snippet {
+  margin: 0;
+  max-height: 190px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--heading);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.circuit-code-snippet code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.circuit-bench-picker {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.circuit-bench-picker button {
+  min-height: 34px;
+  border-radius: 7px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.circuit-bench-picker button.active {
+  border-color: var(--deep-blue);
+  background: var(--soft-blue);
+  color: var(--heading);
 }
 
 .circuit-card-heading {

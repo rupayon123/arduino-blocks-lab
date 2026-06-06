@@ -1,5 +1,19 @@
-import { useState, type CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Cpu, Globe2, RadioTower, Sparkles, Zap } from "lucide-react";
+import { useEffect, useState, type CSSProperties } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Cpu,
+  ExternalLink,
+  Globe2,
+  Play,
+  RadioTower,
+  Sparkles,
+  TabletSmartphone,
+  Wrench,
+  Zap
+} from "lucide-react";
 import {
   defaultBenchControlValues,
   simulateBenchReadings,
@@ -17,8 +31,12 @@ import {
 
 type Props = {
   model: CircuitStudioModel;
+  generatedCode?: string;
   onExportWokwiProject?: () => void;
+  onOpenCode?: () => void;
 };
+
+type CircuitStudioView = "board" | "breadboard" | "bench";
 
 function stepIcon(state: CircuitStudioStepState) {
   if (state === "done") return <CheckCircle2 size={16} />;
@@ -83,7 +101,11 @@ function nextRangeValue(control: Extract<CircuitStudioBenchControl, { kind: "ran
   return Number(next.toFixed(4));
 }
 
-function BenchControl({ control, value, onChange }: { control: CircuitStudioBenchControl; value: CircuitStudioBenchControlValue; onChange: (value: CircuitStudioBenchControlValue) => void }) {
+function BenchControl({
+  control,
+  value,
+  onChange
+}: { control: CircuitStudioBenchControl; value: CircuitStudioBenchControlValue; onChange: (value: CircuitStudioBenchControlValue) => void }) {
   if (control.kind === "toggle") {
     const pressed = Boolean(value);
     return (
@@ -158,17 +180,43 @@ function BenchReadout({ reading }: { reading: CircuitStudioBenchReading }) {
   );
 }
 
-export default function CircuitStudioPanel({ model, onExportWokwiProject }: Props) {
+export default function CircuitStudioPanel({ model, generatedCode, onExportWokwiProject, onOpenCode }: Props) {
   const [controlState, setControlState] = useState<BenchControlState>({});
+  const [studioView, setStudioView] = useState<CircuitStudioView>("board");
+  const [selectedBenchTestId, setSelectedBenchTestId] = useState<string>(model.benchTests[0]?.id ?? "");
+  const [showProgramTrace, setShowProgramTrace] = useState(true);
   const readyLabel =
-    model.stats.errors > 0
-      ? `${model.stats.errors} fix${model.stats.errors === 1 ? "" : "es"}`
-      : model.stats.warnings > 0
-        ? `${model.stats.warnings} review`
-        : "Ready";
+    model.stats.errors > 0 ? `${model.stats.errors} fix${model.stats.errors === 1 ? "" : "es"}` : model.stats.warnings > 0 ? `${model.stats.warnings} review` : "Ready";
+
+  useEffect(() => {
+    if (!model.benchTests.some((test) => test.id === selectedBenchTestId)) {
+      setSelectedBenchTestId(model.benchTests[0]?.id ?? "");
+    }
+  }, [selectedBenchTestId, model.benchTests]);
+
+  const selectedBenchTest =
+    model.benchTests.find((test) => test.id === selectedBenchTestId) ?? model.benchTests[0] ?? null;
+  const selectedValues = selectedBenchTest ? valuesForTest(selectedBenchTest, controlState) : {};
+  const selectedReadings = selectedBenchTest ? simulateBenchReadings(selectedBenchTest, selectedValues) : [];
+  const serialEvents = model.events.filter((event) => event.tone === "serial");
 
   return (
     <div className="circuit-panel">
+      <div className="circuit-view-tabs" role="tablist" aria-label="Circuit workspace mode">
+        <button className={studioView === "board" ? "active" : ""} type="button" onClick={() => setStudioView("board")}>
+          <Cpu size={15} />
+          Arduino Board
+        </button>
+        <button className={studioView === "breadboard" ? "active" : ""} type="button" onClick={() => setStudioView("breadboard")}>
+          <TabletSmartphone size={15} />
+          Breadboard
+        </button>
+        <button className={studioView === "bench" ? "active" : ""} type="button" onClick={() => setStudioView("bench")}>
+          <Wrench size={15} />
+          Virtual Bench
+        </button>
+      </div>
+
       <div className="circuit-hero">
         <div>
           <span>Circuit Studio</span>
@@ -191,7 +239,7 @@ export default function CircuitStudioPanel({ model, onExportWokwiProject }: Prop
       </div>
 
       <div className="circuit-workbench">
-        <section className="circuit-stage" aria-label="3D circuit planning view">
+        <section className={`circuit-stage ${studioView}`} aria-label="Circuit planning view">
           <div className="circuit-floor" />
           <svg className="circuit-wire-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             {model.wires.map((wire) => (
@@ -199,14 +247,22 @@ export default function CircuitStudioPanel({ model, onExportWokwiProject }: Prop
             ))}
           </svg>
 
-          <div className="arduino-model">
-            <span className="usb-port" />
-            <strong>{model.boardName}</strong>
-            <span className="pin-bank top" />
-            <span className="pin-bank bottom" />
-            <span className="chip" />
-            <span className="power-jack" />
-          </div>
+          {studioView === "board" && (
+            <div className="arduino-model">
+              <span className="usb-port" />
+              <strong>{model.boardName}</strong>
+              <span className="pin-bank top" />
+              <span className="pin-bank bottom" />
+              <span className="chip" />
+              <span className="power-jack" />
+            </div>
+          )}
+
+          {studioView === "breadboard" && (
+            <div className="circuit-floor-label" aria-hidden="true">
+              Breadboard planning
+            </div>
+          )}
 
           <div className="breadboard-model">
             <span className="rail positive" />
@@ -356,75 +412,130 @@ export default function CircuitStudioPanel({ model, onExportWokwiProject }: Prop
 
           <section className="circuit-card">
             <div className="circuit-card-heading">
-              <strong>Bench Test</strong>
-              <span>{model.benchTests.length} checks</span>
+              <strong>Run Preview</strong>
+              <span>{studioView === "bench" ? "Simulation controls" : `${model.events.length} beats`}</span>
             </div>
-            <div className="circuit-bench-list">
-              {model.benchTests.length === 0 ? (
-                <div className="empty-row">Add a behavior block to get a bench test.</div>
-              ) : (
-                model.benchTests.map((test) => {
-                  const values = valuesForTest(test, controlState);
-                  const readings = simulateBenchReadings(test, values);
-                  return (
-                    <div className={`circuit-bench-test ${test.tone}`} key={test.id}>
-                      {benchIcon(test.tone)}
-                      <div className="bench-test-body">
-                        <strong>{test.title}</strong>
-                        <small>{test.setup}</small>
-                        <p>{test.expected}</p>
-                        {test.simulation.controls.length > 0 && (
-                          <div className="bench-control-grid">
-                            {test.simulation.controls.map((control) => (
-                              <BenchControl
-                                control={control}
-                                key={control.id}
-                                value={values[control.id] ?? control.defaultValue}
-                                onChange={(value) =>
-                                  setControlState((current) => ({
-                                    ...current,
-                                    [controlKey(test.id, control.id)]: value
-                                  }))
-                                }
-                              />
-                            ))}
-                          </div>
-                        )}
-                        <div className="bench-readout-grid">
-                          {(readings.length > 0 ? readings : test.readings).map((reading) => (
-                            <BenchReadout key={reading.id} reading={reading} />
-                          ))}
-                        </div>
-                      </div>
+            {studioView === "bench" ? (
+              <div className="virtual-bench-console">
+                <button type="button" onClick={() => setShowProgramTrace((current) => !current)}>
+                  <Play size={14} />
+                  {showProgramTrace ? "Show code block" : "Show program trace"}
+                </button>
+                <button type="button" onClick={onOpenCode} disabled={!onOpenCode}>
+                  <ExternalLink size={14} />
+                  Open Arduino code view
+                </button>
+              </div>
+            ) : (
+              <div className="circuit-event-list">
+                {model.events.length === 0 ? (
+                  <div className="empty-row">No code behavior yet.</div>
+                ) : (
+                  model.events.slice(0, 8).map((event, index) => (
+                    <div className={`circuit-event ${event.tone}`} key={event.id}>
+                      <em>{index + 1}</em>
+                      {eventIcon(event.tone)}
+                      <span>
+                        <strong>{event.title}</strong>
+                        {event.detail}
+                      </span>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+            )}
+            {studioView === "bench" && (
+              <div className="code-trace-block">
+                <div className="circuit-card-heading">
+                  <strong>Program Trace</strong>
+                  <span>{serialEvents.length} serial output event{serialEvents.length === 1 ? "" : "s"}</span>
+                </div>
+                {showProgramTrace ? (
+                  <div className="virtual-event-list">
+                    {model.events.map((event) => (
+                      <div className="virtual-event-line" key={event.id}>
+                        {eventIcon(event.tone)}
+                        <p>
+                          <strong>{event.title}:</strong> {event.detail}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <pre className="circuit-code-snippet">
+                    <code>{generatedCode ? `${generatedCode.split("\n").slice(0, 12).join("\n")}\n...` : "// Arduino C++ preview unavailable."}</code>
+                  </pre>
+                )}
+              </div>
+            )}
           </section>
 
-          <section className="circuit-card">
-            <div className="circuit-card-heading">
-              <strong>Run Preview</strong>
-              <span>{model.events.length} beats</span>
-            </div>
-            <div className="circuit-event-list">
-              {model.events.length === 0 ? (
-                <div className="empty-row">No code behavior yet.</div>
-              ) : (
-                model.events.map((event, index) => (
-                  <div className={`circuit-event ${event.tone}`} key={event.id}>
-                    <em>{index + 1}</em>
-                    {eventIcon(event.tone)}
-                    <span>
-                      <strong>{event.title}</strong>
-                      {event.detail}
-                    </span>
+          {selectedBenchTest ? (
+            <section className="circuit-card circuit-card--bench-single">
+              <div className="circuit-card-heading">
+                <strong>Bench Test</strong>
+                <span>{model.benchTests.length} checks</span>
+              </div>
+              <div className="circuit-bench-list">
+                <div className={`circuit-bench-test ${selectedBenchTest.tone}`} key={selectedBenchTest.id}>
+                  {benchIcon(selectedBenchTest.tone)}
+                  <div className="bench-test-body">
+                    <strong>{selectedBenchTest.title}</strong>
+                    <small>{selectedBenchTest.setup}</small>
+                    <p>{selectedBenchTest.expected}</p>
+                    {selectedBenchTest.simulation.controls.length > 0 && (
+                      <div className="bench-control-grid">
+                        {selectedBenchTest.simulation.controls.map((control) => (
+                          <BenchControl
+                            control={control}
+                            key={control.id}
+                            value={selectedValues[control.id] ?? control.defaultValue}
+                            onChange={(value) =>
+                              setControlState((current) => ({
+                                ...current,
+                                [controlKey(selectedBenchTest.id, control.id)]: value
+                              }))
+                            }
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="bench-readout-grid">
+                      {(selectedReadings.length > 0 ? selectedReadings : selectedBenchTest.readings).map((reading) => (
+                        <BenchReadout key={reading.id} reading={reading} />
+                      ))}
+                    </div>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
+                  <small className="bench-test-hint">
+                    <ArrowRight size={12} />
+                    Pick another behavior to test from the list below.
+                  </small>
+                </div>
+              </div>
+              <div className="circuit-bench-picker">
+                {model.benchTests.map((test) => (
+                  <button
+                    type="button"
+                    className={selectedBenchTest.id === test.id ? "active" : ""}
+                    key={test.id}
+                    onClick={() => {
+                      setSelectedBenchTestId(test.id);
+                    }}
+                  >
+                    {test.title}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="circuit-card">
+              <div className="circuit-card-heading">
+                <strong>Bench Test</strong>
+                <span>0 checks</span>
+              </div>
+              <div className="empty-row">Add a behavior block to get a bench test.</div>
+            </section>
+          )}
         </aside>
       </div>
     </div>

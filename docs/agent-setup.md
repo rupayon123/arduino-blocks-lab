@@ -8,7 +8,32 @@ The simplest path after cloning this repo is:
 npm run agent
 ```
 
+You can confirm the whole local path with:
+
+```bash
+npm run agent:preflight
+```
+
+If the preflight returns `READY_FOR_REAL_UPLOAD_TEST=1`, your machine is ready for the first real upload.
+
 The launcher installs missing workspace packages on first run, checks whether Arduino CLI is available, and starts the localhost helper. Keep that terminal open while using the public web app. You can also open `http://127.0.0.1:47631/` to see the local helper status page.
+
+## Fastest way to confirm real-board readiness
+
+Run this exact sequence when you want to start hands-on testing:
+
+```bash
+arduino-cli version
+npm run agent
+```
+
+Then in another terminal:
+
+```bash
+arduino-cli board list
+```
+
+If your board appears, you can return to the running web app and upload from Board → Compile/Upload.
 
 ## macOS
 

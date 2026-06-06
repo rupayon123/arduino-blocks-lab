@@ -690,15 +690,27 @@ export default function App() {
   const ideaMatches = useMemo(() => createProjectIdeaMatches(projectIdeas, ideaQuery, activeCatalog.components, 4), [activeCatalog.components, ideaQuery]);
 
   const updateFromBlocks = useCallback((program: ProgramStep[], blocksXml: string) => {
-    setProject((current) => ({
-      ...current,
-      program,
-      blocksXml,
-      generatedSketch: generateSketch({ ...current, program, blocksXml }, activeCatalog).code
-    }));
+    try {
+      setProject((current) => ({
+        ...current,
+        program,
+        blocksXml,
+        generatedSketch: generateSketch({ ...current, program, blocksXml }, activeCatalog).code
+      }));
+    } catch (error) {
+      console.error("Failed to generate sketch from blocks", error);
+      setProject((current) => ({
+        ...current,
+        program,
+        blocksXml,
+        generatedSketch: current.generatedSketch
+      }));
+      setAgentLog((current) => [`Blockly sync skipped: failed to regenerate sketch.`, ...current]);
+    }
   }, [activeCatalog]);
 
   const updateFromIconBlocks = useCallback((program: ProgramStep[]) => {
+    setReloadKey(crypto.randomUUID());
     setProject((current) => {
       const nextProject = { ...current, program };
       const blocksXml = projectToBlocklyXml(nextProject);
@@ -1721,7 +1733,17 @@ export default function App() {
             </div>
           )}
 
-          {mode === "circuit" && <CircuitStudioPanel model={circuitStudio} onExportWokwiProject={() => void exportWokwiProject()} />}
+          {mode === "circuit" && (
+            <CircuitStudioPanel
+              model={circuitStudio}
+              generatedCode={generated.code}
+              onExportWokwiProject={() => void exportWokwiProject()}
+              onOpenCode={() => {
+                setCodeView("cpp");
+                setMode("code");
+              }}
+            />
+          )}
 
           {mode === "lessons" && (
             <div className="lessons-panel mission-panel">
