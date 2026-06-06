@@ -32,8 +32,8 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
             </span>
             <h1 id="landing-title">Learn by building. Build by coding. Code by uploading.</h1>
             <p>
-              A playful, guided Blockly environment inspired by LEGO-style simplicity. Start with blocks, inspect generated
-              C++, test ideas quickly, then flash real hardware with confidence.
+              A playful, guided Blockly environment inspired by LEGO-style learning. Start with blocks, inspect generated
+              C++, validate wiring fast, then flash real hardware with confidence.
             </p>
             <div className="landing-actions">
               <button className="landing-primary" onClick={onStart}>
@@ -62,40 +62,47 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
           </div>
 
           <div className="landing-scene" aria-hidden="true">
-            <div className="landing-bubble bubble-blocks">
-              <SquareStack size={18} />
-              <span>Blocks</span>
-            </div>
-            <div className="landing-bubble bubble-code">
-              <Code2 size={18} />
-              <span>C++</span>
-            </div>
-            <div className="landing-bubble bubble-usb">
-              <Cable size={18} />
-              <span>Upload</span>
-            </div>
-
             <article className="landing-preview-card">
               <header>
-                <span>Starter Project</span>
-                <strong>Blink</strong>
+                <span>Starter Flow</span>
+                <strong>From blocks to hardware</strong>
               </header>
-              <p>One minute to get your first LED blinking.</p>
+              <p>Learn with guided missions and instant checks.</p>
               <ol>
-                <li>Build blocks</li>
-                <li>Review generated code</li>
-                <li>Compile and flash</li>
+                <li>Build behavior with blocks</li>
+                <li>Review generated Arduino C++</li>
+                <li>Check wiring and dependencies</li>
+                <li>Compile, upload, and test</li>
               </ol>
+            </article>
+
+            <article className="landing-preview-card landing-code-card">
+              <header>
+                <span>Generated C++</span>
+                <strong>Blink in one minute</strong>
+              </header>
+              <pre>
+                <span>void setup() {"{"}</span>
+                <span>  pinMode(13, OUTPUT);</span>
+                <span> {"}"} </span>
+                <span>void loop() {"{"}</span>
+                <span>  digitalWrite(13, HIGH);</span>
+                <span>  delay(500);</span>
+                <span>  digitalWrite(13, LOW);</span>
+                <span>  delay(500);</span>
+                <span>{"}"}</span>
+              </pre>
+              <div className="landing-orbit">Preview is editable before flashing.</div>
             </article>
 
             <article className="landing-preview-card">
               <header>
-                <span>Circuit Studio</span>
-                <strong>Visual wiring</strong>
+                <span>Wiring Safety</span>
+                <strong>Visual checks</strong>
               </header>
-              <p>Use guided wiring checks before touching your breadboard.</p>
+              <p>We catch floating inputs, pin conflicts, and missing parts before upload.</p>
               <div className="landing-orbit" aria-label="workflow">
-                Block → Code → Test → Upload
+                Block → Wire → Validate → Upload
               </div>
             </article>
           </div>
