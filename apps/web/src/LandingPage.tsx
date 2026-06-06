@@ -14,6 +14,15 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
   return (
     <main className="landing-shell">
       <section className="landing-hero" aria-labelledby="landing-title">
+        <div className="landing-bubbles" aria-hidden="true">
+          <span className="landing-bubble b1" />
+          <span className="landing-bubble b2" />
+          <span className="landing-bubble b3" />
+          <span className="landing-bubble b4" />
+          <span className="landing-bubble b5" />
+          <span className="landing-bubble b6" />
+        </div>
+
         <nav className="landing-nav" aria-label="Landing navigation">
           <div className="landing-brand">
             <span className="landing-brand-mark">
@@ -28,12 +37,12 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
           <div className="landing-hero-copy">
             <span className="landing-kicker">
               <Sparkles size={16} />
-              Kid-first block coding for real Arduino boards
+              Beginner-first Arduino Blockly + code experience
             </span>
-            <h1 id="landing-title">Learn by building. Build by coding. Code by uploading.</h1>
+            <h1 id="landing-title">Build ideas fast, understand code, and flash real Arduino boards.</h1>
             <p>
-              A playful, guided Blockly environment inspired by LEGO-style learning. Start with blocks, inspect generated
-              C++, validate wiring fast, then flash real hardware with confidence.
+              A playful workflow inspired by LEGO-style learning. Start with blocks, inspect generated C++, check wiring, and
+              upload only when your project is ready.
             </p>
             <div className="landing-actions">
               <button className="landing-primary" onClick={onStart}>
@@ -42,21 +51,21 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
               </button>
               <button className="landing-secondary" onClick={onOpenCode}>
                 <Code2 size={18} />
-                See Arduino C++
+                View Arduino C++
               </button>
             </div>
             <ul className="landing-trust-line">
               <li>
                 <Cable size={16} />
-                Connect and upload to Uno / Nano / Mega
+                Connect Uno, Nano, and Mega boards
               </li>
               <li>
                 <CircuitBoard size={16} />
-                Visual wiring and project checks before hardware
+                Visual wiring checks before hardware upload
               </li>
               <li>
                 <Sparkles size={16} />
-                Learn faster with lessons, templates, and live hints
+                Beginner missions and playful live previews
               </li>
             </ul>
           </div>
@@ -84,7 +93,7 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
               <pre>
                 <span>void setup() {"{"}</span>
                 <span>  pinMode(13, OUTPUT);</span>
-                <span> {"}"} </span>
+                <span>{"}"}</span>
                 <span>void loop() {"{"}</span>
                 <span>  digitalWrite(13, HIGH);</span>
                 <span>  delay(500);</span>
@@ -92,15 +101,15 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
                 <span>  delay(500);</span>
                 <span>{"}"}</span>
               </pre>
-              <div className="landing-orbit">Preview is editable before flashing.</div>
+              <div className="landing-orbit">Editable, readable, and upload-ready.</div>
             </article>
 
             <article className="landing-preview-card">
               <header>
                 <span>Wiring Safety</span>
-                <strong>Visual checks</strong>
+                <strong>Project confidence</strong>
               </header>
-              <p>We catch floating inputs, pin conflicts, and missing parts before upload.</p>
+              <p>We catch floating inputs, pin conflicts, and missing parts before you touch hardware.</p>
               <div className="landing-orbit" aria-label="workflow">
                 Block → Wire → Validate → Upload
               </div>
