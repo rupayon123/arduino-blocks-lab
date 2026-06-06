@@ -14,13 +14,11 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
   return (
     <main className="landing-shell">
       <section className="landing-hero" aria-labelledby="landing-title">
-        <div className="landing-bubbles" aria-hidden="true">
-          <span className="landing-bubble b1" />
-          <span className="landing-bubble b2" />
-          <span className="landing-bubble b3" />
-          <span className="landing-bubble b4" />
-          <span className="landing-bubble b5" />
-          <span className="landing-bubble b6" />
+        <div className="landing-glowfield" aria-hidden="true">
+          <span className="landing-glow b1" />
+          <span className="landing-glow b2" />
+          <span className="landing-glow b3" />
+          <span className="landing-glow b4" />
         </div>
 
         <nav className="landing-nav" aria-label="Landing navigation">
@@ -71,6 +69,24 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
           </div>
 
           <div className="landing-scene" aria-hidden="true">
+            <div className="landing-flow-band">
+              <article className="landing-flow-card">
+                <span>🧩</span>
+                <strong>Build with blocks</strong>
+                <p>Drag a few blocks and watch live C++ fill in line by line.</p>
+              </article>
+              <article className="landing-flow-card">
+                <span>🔌</span>
+                <strong>Sim and wire first</strong>
+                <p>Check pin wiring, dependencies, and warnings before hardware.</p>
+              </article>
+              <article className="landing-flow-card">
+                <span>⚡</span>
+                <strong>Flash the board</strong>
+                <p>Compile and upload to Uno, Nano, and Mega when ready.</p>
+              </article>
+            </div>
+
             <article className="landing-preview-card">
               <header>
                 <span>Starter Flow</span>
@@ -111,7 +127,7 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
               </header>
               <p>We catch floating inputs, pin conflicts, and missing parts before you touch hardware.</p>
               <div className="landing-orbit" aria-label="workflow">
-                Block → Wire → Validate → Upload
+                Check → Fix → Build → Upload
               </div>
             </article>
           </div>
