@@ -42,7 +42,7 @@ Make Arduino Blocks Lab the easiest way for students and makers to go from visua
 - Project coach turns board, hardware, blocks, wiring, code, and upload state into beginner-friendly next steps.
 - Guided lesson sheets turn each mission into materials, concepts, activity steps, success checks, teacher notes, and a downloadable build guide.
 - Teacher unit plans summarize mission pacing, materials, concepts, libraries, prep notes, and lesson load into an exportable handout.
-- Mission path unlocks lessons in order, recommends the next activity, and shows remaining classroom pacing time.
+- Mission path opens lessons in order, recommends the next activity, and shows remaining classroom pacing time.
 - Printable build guides turn each project into parts, component pins, wiring steps, library notes, checks, upload steps, and the generated sketch.
 - Shareable project links let a learner send a complete blocks-and-hardware project without accounts or cloud storage.
 - Hardware pack gallery plus URL install supports raw JSON URLs and common GitHub pack links so new sensors can be shared from public repos.

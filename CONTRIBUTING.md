@@ -21,6 +21,8 @@ npm run dev
 
 The web app runs at `http://127.0.0.1:5173`. The upload agent runs at `http://127.0.0.1:47631`.
 
+UI and landing page work should follow `docs/design-brief.md`.
+
 ## Adding Hardware
 
 Hardware should be modeled through the block-pack shape in `docs/extension-format.md`.

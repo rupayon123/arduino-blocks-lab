@@ -1,4 +1,4 @@
-import { Cable, CircuitBoard, Code2, Cpu, Gauge, Play, Sparkles, SquareStack } from "lucide-react";
+import { Cable, CircuitBoard, Code2, Cpu, Gauge, Play, SquareStack } from "lucide-react";
 
 type Props = {
   boardCount: number;
@@ -14,13 +14,6 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
   return (
     <main className="landing-shell">
       <section className="landing-hero" aria-labelledby="landing-title">
-        <div className="landing-glowfield" aria-hidden="true">
-          <span className="landing-glow b1" />
-          <span className="landing-glow b2" />
-          <span className="landing-glow b3" />
-          <span className="landing-glow b4" />
-        </div>
-
         <nav className="landing-nav" aria-label="Landing navigation">
           <div className="landing-brand">
             <span className="landing-brand-mark">
@@ -34,13 +27,13 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
         <div className="landing-hero-layout">
           <div className="landing-hero-copy">
             <span className="landing-kicker">
-              <Sparkles size={16} />
-              Beginner-first Arduino Blockly + code experience
+              <CircuitBoard size={16} />
+              Classroom-ready Arduino blocks, code, and upload
             </span>
-            <h1 id="landing-title">Build ideas fast, understand code, and flash real Arduino boards.</h1>
+            <h1 id="landing-title">Arduino Blocks Lab</h1>
             <p>
-              A playful workflow inspired by LEGO-style learning. Start with blocks, inspect generated C++, check wiring, and
-              upload only when your project is ready.
+              Start with blocks, read the Arduino C++ beside them, check the wiring, then flash a real Uno, Nano, or Mega from
+              the local agent.
             </p>
             <div className="landing-actions">
               <button className="landing-primary" onClick={onStart}>
@@ -55,86 +48,81 @@ export default function LandingPage({ boardCount, componentCount, lessonCount, o
             <ul className="landing-trust-line">
               <li>
                 <Cable size={16} />
-                Connect Uno, Nano, and Mega boards
+                Real USB upload path through Arduino CLI
               </li>
               <li>
                 <CircuitBoard size={16} />
-                Visual wiring checks before hardware upload
+                Pin and wiring checks before class hardware
               </li>
               <li>
-                <Sparkles size={16} />
-                Beginner missions and playful live previews
+                <SquareStack size={16} />
+                Icon blocks, Blockly blocks, and Arduino C++
               </li>
             </ul>
           </div>
 
-          <div className="landing-scene" aria-hidden="true">
-            <div className="landing-flow-band">
-              <article className="landing-flow-card">
-                <span>🧩</span>
-                <strong>Build with blocks</strong>
-                <p>Drag a few blocks and watch live C++ fill in line by line.</p>
-              </article>
-              <article className="landing-flow-card">
-                <span>🔌</span>
-                <strong>Sim and wire first</strong>
-                <p>Check pin wiring, dependencies, and warnings before hardware.</p>
-              </article>
-              <article className="landing-flow-card">
-                <span>⚡</span>
-                <strong>Flash the board</strong>
-                <p>Compile and upload to Uno, Nano, and Mega when ready.</p>
-              </article>
+          <div className="landing-workbench" aria-hidden="true">
+            <div className="bench-topline">
+              <span>Blocks</span>
+              <span>Wiring</span>
+              <span>C++</span>
+              <span>Upload</span>
             </div>
 
-            <article className="landing-preview-card">
-              <header>
-                <span>Starter Flow</span>
-                <strong>From blocks to hardware</strong>
-              </header>
-              <p>Learn with guided missions and instant checks.</p>
-              <ol>
-                <li>Build behavior with blocks</li>
-                <li>Review generated Arduino C++</li>
-                <li>Check wiring and dependencies</li>
-                <li>Compile, upload, and test</li>
-              </ol>
-            </article>
+            <div className="bench-surface">
+              <div className="bench-wire wire-a" />
+              <div className="bench-wire wire-b" />
+              <div className="bench-wire wire-c" />
 
-            <article className="landing-preview-card landing-code-card">
-              <header>
-                <span>Generated C++</span>
-                <strong>Blink in one minute</strong>
-              </header>
-              <pre>
-                <span>void setup() {"{"}</span>
-                <span>  pinMode(13, OUTPUT);</span>
-                <span>{"}"}</span>
+              <div className="bench-board">
+                <div className="bench-usb" />
+                <div className="bench-chip" />
+                <div className="bench-pins top" />
+                <div className="bench-pins bottom" />
+                <strong>UNO</strong>
+                <small>Port ready</small>
+              </div>
+
+              <div className="bench-blocks">
+                <span className="block-chip blue">when loop runs</span>
+                <span className="block-chip green">set LED 13 high</span>
+                <span className="block-chip amber">wait 500 ms</span>
+                <span className="block-chip coral">set LED 13 low</span>
+              </div>
+
+              <pre className="bench-code">
                 <span>void loop() {"{"}</span>
                 <span>  digitalWrite(13, HIGH);</span>
                 <span>  delay(500);</span>
                 <span>  digitalWrite(13, LOW);</span>
-                <span>  delay(500);</span>
                 <span>{"}"}</span>
               </pre>
-              <div className="landing-orbit">Editable, readable, and upload-ready.</div>
-            </article>
 
-            <article className="landing-preview-card">
-              <header>
-                <span>Wiring Safety</span>
-                <strong>Project confidence</strong>
-              </header>
-              <p>We catch floating inputs, pin conflicts, and missing parts before you touch hardware.</p>
-              <div className="landing-orbit" aria-label="workflow">
-                Check → Fix → Build → Upload
+              <div className="bench-breadboard">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <strong>LED + resistor</strong>
               </div>
-            </article>
+            </div>
+
+            <div className="bench-checks">
+              <span>Pin 13 mapped</span>
+              <span>No missing libraries</span>
+              <span>Ready to compile</span>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="landing-band" aria-label="Project entry points">
+        <div className="landing-band-heading">
+          <span>Choose a station</span>
+          <strong>Move from first lesson to real upload without losing the thread.</strong>
+        </div>
         <div className="landing-stat-row">
           <span>
             <strong>{boardCount}</strong>
