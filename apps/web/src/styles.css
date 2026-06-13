@@ -751,7 +751,7 @@ button:disabled {
   align-items: start;
   overflow: visible;
   min-height: 0;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
 }
 
 .workspace-grid.mode-blocks.style-blocks {

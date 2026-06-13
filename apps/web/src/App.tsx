@@ -148,7 +148,7 @@ const projectStyleOptions: Array<{
   },
   {
     id: "blocks",
-    title: "Word Blocks",
+    title: "Blocks",
     kicker: "blocks-first",
     detail: "Build with word-style blocks and live Arduino C++ preview."
   },
@@ -960,7 +960,7 @@ export default function App() {
           : `${wiringCanvas.summary.total} ready`;
   const activeStyleOption = projectStyleOptions.find((option) => option.id === projectStyle) ?? {
     id: "blocks",
-    title: "Word Blocks",
+    title: "Blocks",
     kicker: "scratch-style",
     detail: "Build with word-style blocks and live Arduino C++."
   };
@@ -1231,7 +1231,7 @@ export default function App() {
     applyProjectStyle(newProjectStyle);
     setNewProjectOpen(false);
     setAgentLog((current) => [
-      `Created Project 1 in ${projectStyleOptions.find((option) => option.id === newProjectStyle)?.title ?? "Word Blocks"}.`,
+      `Created Project 1 in ${projectStyleOptions.find((option) => option.id === newProjectStyle)?.title ?? "Blocks"}.`,
       ...current
     ]);
   }
@@ -1811,7 +1811,7 @@ export default function App() {
               }}
             >
               <SquareStack size={18} />
-              Word Blocks
+              Blocks
             </button>
             <button className={mode === "code" ? "active" : ""} onClick={() => setMode("code")}>
               <Code2 size={18} />
@@ -1915,7 +1915,7 @@ export default function App() {
               ) : (
                 <SquareStack size={15} />
               )}
-              <span>{option.id === "icon" ? "Icon Blocks" : option.id === "blocks" ? "Word Blocks" : "Arduino C++"}</span>
+              <span>{option.id === "icon" ? "Icon Blocks" : option.id === "blocks" ? "Blocks" : "Arduino C++"}</span>
             </button>
           ))}
         </div>
