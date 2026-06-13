@@ -883,11 +883,11 @@ button:disabled {
 }
 
 .app-shell {
-  min-height: 100vh;
-  height: auto;
+  min-height: 0;
+  height: 100vh;
   display: grid;
-  grid-template-rows: auto auto 1fr;
-  overflow: visible;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .topbar {
@@ -1079,8 +1079,8 @@ button:disabled {
   grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(290px, 330px);
   gap: 14px;
   padding: 14px;
-  align-items: start;
-  overflow: visible;
+  align-items: stretch;
+  overflow: auto;
   min-height: 0;
 }
 
@@ -1124,7 +1124,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow: visible;
+  overflow: auto;
 }
 
 .panel-section,
@@ -5805,7 +5805,7 @@ html[data-theme="dark"] .breadboard-model {
   }
 
   .app-shell {
-    height: auto;
+    height: 100vh;
     min-height: 0;
   }
 
@@ -5925,7 +5925,7 @@ html[data-theme="dark"] .breadboard-model {
 
   .workspace-grid {
     grid-template-columns: 1fr;
-    overflow: visible;
+    overflow: auto;
   }
 
   .workspace-grid.mode-blocks.style-blocks {
@@ -5938,7 +5938,7 @@ html[data-theme="dark"] .breadboard-model {
   .workspace-grid.mode-blocks.style-blocks .right-panel {
     padding: 0;
     border: 0;
-    overflow: visible;
+    overflow: auto;
   }
 
   .workspace-grid.mode-blocks.style-blocks .main-panel {

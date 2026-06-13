@@ -51,8 +51,66 @@ const darkBlocklyTheme = Blockly.Theme.defineTheme("ablDark", {
 
 const emptyBlocklyXml = "<xml xmlns=\"https://developers.google.com/blockly/xml\"/>";
 
-function sanitizeBlocklyXml(rawXml: string): string {
-  return rawXml.trim() ? rawXml : emptyBlocklyXml;
+function getKnownBlockTypes() {
+  return new Set(
+    Object.keys(Blockly.Blocks)
+      .map((type) => ({
+        type,
+        spec: Blockly.Blocks[type]
+      }))
+      .filter((entry) => typeof entry.spec?.init === "function")
+      .map((entry) => entry.type)
+  );
+}
+
+function sanitizeBlocklyXml(rawXml: string) {
+  const trimmed = rawXml.trim();
+  if (!trimmed) {
+    return {
+      xml: emptyBlocklyXml,
+      warnings: [] as string[]
+    };
+  }
+
+  let dom: Element;
+  try {
+    dom = Blockly.utils.xml.textToDom(trimmed);
+  } catch {
+    return {
+      xml: emptyBlocklyXml,
+      warnings: ["Blockly XML is invalid. Loading a blank workspace instead."]
+    };
+  }
+
+  const knownBlockTypes = getKnownBlockTypes();
+  const blockNodes = Array.from(dom.querySelectorAll("block"));
+  if (blockNodes.length === 0) {
+    return {
+      xml: trimmed,
+      warnings: []
+    };
+  }
+
+  let removed = 0;
+  for (const block of blockNodes) {
+    const type = block.getAttribute("type");
+    if (!type || knownBlockTypes.has(type)) continue;
+
+    removed += 1;
+    const nextBlock = block.querySelector("next > block")?.cloneNode(true) as Element | null;
+
+    if (nextBlock && block.parentNode) {
+      block.replaceWith(nextBlock);
+      continue;
+    }
+
+    block.remove();
+  }
+
+  return {
+    xml: Blockly.Xml.domToText(dom),
+    warnings: removed > 0 ? [`Recovered from ${removed} unknown block${removed === 1 ? "" : "s"} in saved project.`] : []
+  };
 }
 
 function blocklyThemeFor(themePreference: ThemePreference) {
@@ -81,6 +139,8 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
   const syncFrameRef = useRef<number | null>(null);
   const onChangeRef = useRef(onChange);
   const lastWorkspaceXml = useRef<string>("");
+  const lastLoadedXml = useRef<string>("");
+  const lastReloadKey = useRef<string>("");
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 
   const componentsRef = useRef(components);
@@ -188,17 +248,38 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       window.cancelAnimationFrame(syncFrameRef.current);
       syncFrameRef.current = null;
     }
+
+    const prepared = sanitizeBlocklyXml(xml);
+    const shouldReload = lastReloadKey.current !== reloadKey;
+    const sameState = !shouldReload && prepared.xml === lastLoadedXml.current;
+
     loadingRef.current = true;
-    workspace.clear();
-    lastWorkspaceXml.current = "";
     try {
-      const dom = Blockly.utils.xml.textToDom(sanitizeBlocklyXml(xml));
+      if (sameState) {
+        if (prepared.warnings.length > 0) {
+          setWorkspaceError(prepared.warnings.join(" "));
+        }
+        return;
+      }
+
+      const dom = Blockly.utils.xml.textToDom(prepared.xml);
+      workspace.clear();
+      lastWorkspaceXml.current = "";
+      lastLoadedXml.current = prepared.xml;
+      lastReloadKey.current = reloadKey;
       Blockly.Xml.domToWorkspace(dom, workspace);
       syncProjectFromWorkspace(workspace);
+      if (prepared.warnings.length > 0) {
+        setWorkspaceError(prepared.warnings.join(" "));
+      } else {
+        setWorkspaceError(null);
+      }
       workspace.refreshToolboxSelection();
     } catch (error) {
       console.error("Failed to load Blockly XML. Falling back to empty canvas.", error);
       workspace.clear();
+      lastLoadedXml.current = emptyBlocklyXml;
+      lastReloadKey.current = reloadKey;
       syncProjectFromWorkspace(workspace);
       setWorkspaceError("Loaded an older/invalid blocks XML. Your project was restored as an empty canvas.");
     } finally {
