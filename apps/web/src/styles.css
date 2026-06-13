@@ -76,22 +76,23 @@ html[data-theme="dark"] {
 
 html {
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
   width: 100%;
   min-width: 0;
+  min-height: 100%;
   min-height: 100vh;
   background: var(--page-wash);
   color: var(--ink);
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 #root {
+  height: 100%;
   min-height: 100vh;
 }
 
@@ -884,10 +885,11 @@ button:disabled {
 
 .app-shell {
   min-height: 0;
-  height: 100vh;
+  height: 100%;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
   overflow: hidden;
+  min-height: 100vh;
 }
 
 .topbar {
@@ -1053,7 +1055,9 @@ button:disabled {
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--soft-blue) 84%, transparent);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  white-space: nowrap;
 }
 
 .status-strip span {
@@ -1080,7 +1084,7 @@ button:disabled {
   gap: 14px;
   padding: 14px;
   align-items: stretch;
-  overflow: auto;
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -1883,8 +1887,11 @@ button:disabled {
 
 .main-panel {
   min-width: 0;
+  min-height: 0;
   overflow: auto;
   position: relative;
+  height: auto;
+  min-height: 0;
 }
 
 .block-studio {
@@ -3153,6 +3160,124 @@ html[data-theme="dark"] .breadboard-model {
 
 .simulator-stats .warning strong {
   color: var(--amber-line);
+}
+
+.sim-control-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.sim-control-row button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.simulation-warnings {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.warning-row {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--amber-line) 56%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--amber-line) 8%, transparent);
+  color: var(--amber-line);
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.board-input-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.board-input-pin {
+  display: grid;
+  gap: 6px;
+}
+
+.board-input-pin span {
+  display: grid;
+  gap: 2px;
+}
+
+.board-input-pin small {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-input-pin output {
+  justify-self: end;
+  color: var(--deep-blue);
+  font-size: 11px;
+}
+
+.board-input-pin input[type="range"] {
+  width: 100%;
+}
+
+.circuit-transcript {
+  display: grid;
+  gap: 6px;
+  max-height: 170px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.circuit-transcript span {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.component-state-grid {
+  display: grid;
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.component-state-grid span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--paper);
+}
+
+.component-state-grid strong {
+  color: var(--heading);
+  font-size: 12px;
+}
+
+.component-state-grid small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.component-state-grid output {
+  text-align: right;
+  color: var(--deep-blue);
+  font-size: 11px;
 }
 
 .simulator-item-list {
@@ -5805,8 +5930,8 @@ html[data-theme="dark"] .breadboard-model {
   }
 
   .app-shell {
-    height: 100vh;
-    min-height: 0;
+    height: auto;
+    min-height: 100vh;
   }
 
   .app-shell > * {

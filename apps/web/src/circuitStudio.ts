@@ -221,9 +221,26 @@ function pinCount(definition: ComponentDefinition | undefined) {
 
 function createPlacements(project: ProjectDocument, definitions: ComponentDefinition[]): CircuitStudioPlacement[] {
   const definitionsById = componentDefinitionMap(definitions);
+  const placementByComponent = new Map(project.componentPlacement?.map((placement) => [placement.componentId, placement]));
+
   return project.components.map((component, index) => {
     const definition = definitionsById.get(component.componentId);
     const category = definition?.category ?? "unknown";
+    const custom = placementByComponent.get(component.id);
+
+    if (custom && Number.isFinite(custom.x) && Number.isFinite(custom.y)) {
+      return {
+        id: component.id,
+        label: component.label,
+        name: definition?.name ?? component.componentId,
+        category,
+        x: custom.x,
+        y: custom.y,
+        accent: categoryAccents[category],
+        pinCount: pinCount(definition)
+      };
+    }
+
     const column = index % 4;
     const row = Math.floor(index / 4);
     return {

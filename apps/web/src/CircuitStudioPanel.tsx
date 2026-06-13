@@ -7,6 +7,8 @@ import {
   Cpu,
   ExternalLink,
   Globe2,
+  Pause,
+  RotateCcw,
   Play,
   RadioTower,
   Sparkles,
@@ -28,10 +30,24 @@ import {
   type CircuitStudioSimulatorTone,
   type CircuitStudioStepState
 } from "./circuitStudio";
+import type { PinValue } from "@abl/block-schema";
+import type { CircuitRuntimeSnapshot } from "./circuitRuntime";
+
+type RuntimeBoardInput = {
+  pin: string;
+  componentLabel: string;
+  pinName: string;
+};
 
 type Props = {
   model: CircuitStudioModel;
   generatedCode?: string;
+  runtimeSnapshot?: CircuitRuntimeSnapshot;
+  runtimeInputPins?: RuntimeBoardInput[];
+  onRunSimulation?: () => void;
+  onStepSimulation?: () => void;
+  onResetSimulation?: () => void;
+  onSetInput?: (pin: string, value: PinValue) => void;
   onExportWokwiProject?: () => void;
   onOpenCode?: () => void;
 };
@@ -99,6 +115,36 @@ function formattedControlValue(control: CircuitStudioBenchControl, value: Circui
 function nextRangeValue(control: Extract<CircuitStudioBenchControl, { kind: "range" }>, value: number, direction: -1 | 1) {
   const next = Math.max(control.min, Math.min(control.max, value + control.step * direction));
   return Number(next.toFixed(4));
+}
+
+function isDigitalValue(value: PinValue) {
+  return (
+    typeof value === "boolean" ||
+    value === 0 ||
+    value === 1 ||
+    value === "HIGH" ||
+    value === "LOW" ||
+    value === "high" ||
+    value === "low" ||
+    value === "on" ||
+    value === "off"
+  );
+}
+
+function asToggleValue(raw: unknown) {
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw !== 0;
+  if (typeof raw === "string") {
+    const normalized = raw.toLowerCase().trim();
+    return normalized === "1" || normalized === "high" || normalized === "true" || normalized === "on";
+  }
+  return false;
+}
+
+function clampNumeric(value: unknown, fallback: number, max = 1023) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.min(max, Math.round(parsed)));
 }
 
 function BenchControl({
@@ -180,11 +226,75 @@ function BenchReadout({ reading }: { reading: CircuitStudioBenchReading }) {
   );
 }
 
-export default function CircuitStudioPanel({ model, generatedCode, onExportWokwiProject, onOpenCode }: Props) {
+function BoardInputControl({
+  pin,
+  label,
+  value,
+  onChange
+}: {
+  pin: string;
+  label: string;
+  value: PinValue;
+  onChange: (value: PinValue) => void;
+}) {
+  if (isDigitalValue(value)) {
+    const pressed = asToggleValue(value);
+    return (
+      <label className="board-input-pin">
+        <span>
+          {pin}
+          <small>{label}</small>
+        </span>
+        <button className={`bench-toggle ${pressed ? "active" : ""}`} type="button" aria-pressed={pressed} onClick={() => onChange(pressed ? "LOW" : "HIGH")}>
+          {pressed ? "HIGH" : "LOW"}
+        </button>
+      </label>
+    );
+  }
+
+  return (
+    <label className="board-input-pin">
+      <span>
+        {pin}
+        <small>{label}</small>
+      </span>
+      <input
+        type="range"
+        min={0}
+        max={1023}
+        step={1}
+        value={clampNumeric(value, 0)}
+        onInput={(event) => onChange(Number(event.currentTarget.value))}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+      />
+      <output>{clampNumeric(value, 0)}</output>
+    </label>
+  );
+}
+
+export default function CircuitStudioPanel({
+  model,
+  generatedCode,
+  runtimeSnapshot,
+  runtimeInputPins,
+  onRunSimulation,
+  onStepSimulation,
+  onResetSimulation,
+  onSetInput,
+  onExportWokwiProject,
+  onOpenCode
+}: Props) {
   const [controlState, setControlState] = useState<BenchControlState>({});
   const [studioView, setStudioView] = useState<CircuitStudioView>("board");
   const [selectedBenchTestId, setSelectedBenchTestId] = useState<string>(model.benchTests[0]?.id ?? "");
   const [showProgramTrace, setShowProgramTrace] = useState(true);
+  const boardInputPins = runtimeInputPins ?? [];
+  const runtimePins = runtimeSnapshot?.pinValues ?? {};
+  const runtimeSerial = runtimeSnapshot?.serialLog ?? [];
+  const runtimeWarnings = runtimeSnapshot?.warnings ?? [];
+  const runtimeComponents = runtimeSnapshot?.componentState ?? {};
+  const runtimeStatus = runtimeSnapshot?.running ? "Running" : runtimeSnapshot?.halted === "blocked" ? "Blocked" : runtimeSnapshot?.halted === "done" ? "Done" : "Ready";
+  const runBlocked = runtimeSnapshot?.halted === "blocked";
   const readyLabel =
     model.stats.errors > 0 ? `${model.stats.errors} fix${model.stats.errors === 1 ? "" : "es"}` : model.stats.warnings > 0 ? `${model.stats.warnings} review` : "Ready";
 
@@ -199,6 +309,10 @@ export default function CircuitStudioPanel({ model, generatedCode, onExportWokwi
   const selectedValues = selectedBenchTest ? valuesForTest(selectedBenchTest, controlState) : {};
   const selectedReadings = selectedBenchTest ? simulateBenchReadings(selectedBenchTest, selectedValues) : [];
   const serialEvents = model.events.filter((event) => event.tone === "serial");
+  const latestSerial = runtimeSerial.slice(-24);
+  const componentStateRows = Object.entries(runtimeComponents).flatMap(([componentId, values]) =>
+    Object.entries(values).map(([pin, value]) => ({ componentId, pin, value }))
+  );
 
   return (
     <div className="circuit-panel">
@@ -234,6 +348,10 @@ export default function CircuitStudioPanel({ model, generatedCode, onExportWokwi
           <span className={model.stats.errors > 0 ? "blocked" : model.stats.warnings > 0 ? "warning" : "ready"}>
             <strong>{readyLabel}</strong>
             checks
+          </span>
+          <span className={runtimeSnapshot?.running ? "ready" : runBlocked ? "warning" : "blocked"}>
+            <strong>{runtimeStatus}</strong>
+            simulator
           </span>
         </div>
       </div>
@@ -340,6 +458,52 @@ export default function CircuitStudioPanel({ model, generatedCode, onExportWokwi
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="circuit-card">
+            <div className="circuit-card-heading">
+              <strong>Simulation Controls</strong>
+              <span>Live path</span>
+            </div>
+            <div className="sim-control-row">
+              <button type="button" onClick={() => onRunSimulation?.()}>
+                <Play size={14} />
+                Run
+              </button>
+              <button type="button" onClick={() => onStepSimulation?.()}>
+                <Pause size={14} />
+                Step
+              </button>
+              <button type="button" onClick={() => onResetSimulation?.()}>
+                <RotateCcw size={14} />
+                Reset
+              </button>
+            </div>
+            {runtimeWarnings.length > 0 && (
+              <div className="simulation-warnings">
+                {runtimeWarnings.slice(-3).map((warning, index) => (
+                  <span className="warning-row" key={`${warning}-${index}`}>
+                    <AlertTriangle size={12} />
+                    {warning}
+                  </span>
+                ))}
+              </div>
+            )}
+            {boardInputPins.length > 0 ? (
+              <div className="board-input-grid">
+                {boardInputPins.map((entry) => (
+                  <BoardInputControl
+                    key={entry.pin}
+                    pin={entry.pin}
+                    label={entry.pinName ? `${entry.componentLabel} · ${entry.pinName}` : entry.componentLabel}
+                    value={boardInputPins.length > 0 ? (runtimePins[entry.pin] as PinValue | undefined) ?? "LOW" : "LOW"}
+                    onChange={(value) => onSetInput?.(entry.pin, value)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="empty-row">Add connected input pins to test button/analog behavior from the simulation tab.</div>
+            )}
           </section>
 
           <section className={`circuit-card breadboard-card ${model.breadboardPlan.tone}`}>
@@ -469,6 +633,37 @@ export default function CircuitStudioPanel({ model, generatedCode, onExportWokwi
               </div>
             )}
           </section>
+
+          <section className="circuit-card">
+            <div className="circuit-card-heading">
+              <strong>Serial Monitor (sim)</strong>
+              <span>{latestSerial.length}</span>
+            </div>
+            <div className="circuit-transcript">
+              {latestSerial.length === 0 ? <div className="empty-row">No simulation output yet.</div> : null}
+              {latestSerial.map((line, index) => (
+                <span key={`${line}-${index}`}>{line}</span>
+              ))}
+            </div>
+          </section>
+
+          {componentStateRows.length > 0 ? (
+            <section className="circuit-card">
+              <div className="circuit-card-heading">
+                <strong>Component States</strong>
+                <span>{componentStateRows.length} values</span>
+              </div>
+              <div className="component-state-grid">
+                {componentStateRows.slice(0, 14).map((entry) => (
+                  <span key={`${entry.componentId}-${entry.pin}`}>
+                    <strong>{entry.componentId}</strong>
+                    <small>{entry.pin}</small>
+                    <output>{String(entry.value)}</output>
+                  </span>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           {selectedBenchTest ? (
             <section className="circuit-card circuit-card--bench-single">
