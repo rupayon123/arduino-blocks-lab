@@ -22,7 +22,7 @@ function parseAllowedOrigins(value: string | undefined) {
 export const allowedOrigins = parseAllowedOrigins(process.env.ABL_ALLOWED_ORIGINS);
 
 export function isAllowedOrigin(origin: string | undefined) {
-  if (!origin) return true;
+  if (!origin) return false;
   const normalized = originFrom(origin);
   return Boolean(normalized && allowedOrigins.has(normalized));
 }

@@ -518,385 +518,6 @@ html[data-theme="dark"] .landing-band {
   background: var(--paper);
 }
 
-/* Classroom Circuit Bench landing concept. */
-.landing-shell {
-  background:
-    linear-gradient(180deg, rgba(245, 251, 255, 0.96), rgba(255, 255, 255, 0.98)),
-    repeating-linear-gradient(90deg, rgba(17, 121, 186, 0.07) 0 1px, transparent 1px 48px),
-    repeating-linear-gradient(0deg, rgba(17, 121, 186, 0.05) 0 1px, transparent 1px 48px);
-}
-
-.landing-hero {
-  min-height: 88vh;
-  padding: 30px clamp(18px, 5vw, 72px) 42px;
-  align-items: start;
-}
-
-.landing-hero::before {
-  background:
-    linear-gradient(90deg, rgba(20, 168, 224, 0.09) 0, rgba(20, 168, 224, 0.09) 1px, transparent 1px, transparent 40px),
-    linear-gradient(0deg, rgba(20, 168, 224, 0.07) 0, rgba(20, 168, 224, 0.07) 1px, transparent 1px, transparent 40px);
-}
-
-.landing-hero::after {
-  height: 18%;
-}
-
-.landing-nav {
-  left: 0;
-  right: 0;
-  margin: 0 0 38px;
-}
-
-.landing-nav button,
-.landing-actions button,
-.landing-entry-grid button {
-  border-radius: 10px;
-}
-
-.landing-nav button,
-.landing-secondary {
-  background: #ffffff;
-  backdrop-filter: none;
-}
-
-.landing-hero-layout {
-  margin-top: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 28px;
-  max-width: 1180px;
-}
-
-.landing-hero-copy {
-  max-width: 940px;
-  gap: 18px;
-}
-
-.landing-kicker {
-  border-radius: 10px;
-  background: #ffffff;
-  backdrop-filter: none;
-}
-
-.landing-hero h1 {
-  max-width: 820px;
-  font-size: 74px;
-  line-height: 0.95;
-}
-
-.landing-hero p {
-  max-width: 720px;
-  font-size: 20px;
-}
-
-.landing-primary {
-  background: #05a8d8;
-  color: #041f31;
-}
-
-.landing-workbench {
-  position: relative;
-  width: min(100%, 1120px);
-  min-height: 430px;
-  overflow: hidden;
-  border: 2px solid #0a5680;
-  border-radius: 18px;
-  background: #f7fcff;
-  box-shadow: 0 20px 36px rgba(12, 58, 85, 0.15);
-}
-
-.bench-topline,
-.bench-checks {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  background: #0a5680;
-}
-
-.bench-topline span,
-.bench-checks span {
-  min-height: 42px;
-  display: grid;
-  place-items: center;
-  padding: 0 12px;
-  background: #dff5ff;
-  color: #073d66;
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.bench-surface {
-  position: relative;
-  min-height: 340px;
-  background:
-    repeating-linear-gradient(90deg, rgba(17, 121, 186, 0.08) 0 1px, transparent 1px 32px),
-    repeating-linear-gradient(0deg, rgba(255, 200, 61, 0.1) 0 1px, transparent 1px 32px),
-    #fffefd;
-}
-
-.bench-wire {
-  position: absolute;
-  border: 4px solid transparent;
-  border-radius: 999px;
-  pointer-events: none;
-}
-
-.wire-a {
-  left: 250px;
-  top: 130px;
-  width: 260px;
-  height: 92px;
-  border-top-color: #f36c52;
-  border-right-color: #f36c52;
-}
-
-.wire-b {
-  left: 470px;
-  top: 192px;
-  width: 230px;
-  height: 84px;
-  border-bottom-color: #2fa66f;
-  border-left-color: #2fa66f;
-}
-
-.wire-c {
-  right: 304px;
-  top: 102px;
-  width: 178px;
-  height: 120px;
-  border-top-color: #ffc83d;
-  border-left-color: #ffc83d;
-}
-
-.bench-board,
-.bench-blocks,
-.bench-code,
-.bench-breadboard {
-  position: absolute;
-  border: 1px solid rgba(7, 61, 102, 0.18);
-  box-shadow: 0 10px 20px rgba(12, 58, 85, 0.12);
-}
-
-.bench-board {
-  left: 36px;
-  top: 82px;
-  width: 224px;
-  height: 160px;
-  border-radius: 14px;
-  background: #0aa3d2;
-  color: #ffffff;
-}
-
-.bench-board strong {
-  position: absolute;
-  left: 22px;
-  bottom: 28px;
-  font-size: 28px;
-}
-
-.bench-board small {
-  position: absolute;
-  left: 22px;
-  bottom: 12px;
-  font-weight: 850;
-}
-
-.bench-usb {
-  position: absolute;
-  left: -14px;
-  top: 56px;
-  width: 34px;
-  height: 48px;
-  border-radius: 8px;
-  background: #143247;
-}
-
-.bench-chip {
-  position: absolute;
-  right: 54px;
-  top: 50px;
-  width: 64px;
-  height: 54px;
-  border-radius: 8px;
-  background: #102133;
-  box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.08);
-}
-
-.bench-pins {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  height: 12px;
-  background: repeating-linear-gradient(90deg, #102133 0 8px, transparent 8px 16px);
-}
-
-.bench-pins.top {
-  top: 18px;
-}
-
-.bench-pins.bottom {
-  bottom: 18px;
-}
-
-.bench-blocks {
-  left: 42px;
-  bottom: 34px;
-  width: 290px;
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 14px;
-  background: #ffffff;
-}
-
-.block-chip {
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  border-radius: 10px;
-  color: #08263a;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.block-chip.blue {
-  background: #8ad9ff;
-}
-
-.block-chip.green {
-  background: #bff2d1;
-}
-
-.block-chip.amber {
-  background: #ffe07a;
-}
-
-.block-chip.coral {
-  background: #ffb5a7;
-}
-
-.bench-code {
-  right: 34px;
-  top: 66px;
-  width: 330px;
-  margin: 0;
-  padding: 14px;
-  border-radius: 14px;
-  background: #102133;
-  color: #dff5ff;
-  display: grid;
-  gap: 4px;
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 13px;
-}
-
-.bench-code span:nth-child(2),
-.bench-code span:nth-child(4) {
-  color: #ffd56b;
-}
-
-.bench-breadboard {
-  right: 312px;
-  bottom: 36px;
-  width: 250px;
-  min-height: 104px;
-  padding: 18px 16px 14px;
-  border-radius: 14px;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 16px, rgba(17, 121, 186, 0.14) 16px 18px),
-    #fff7dd;
-}
-
-.bench-breadboard span {
-  width: 10px;
-  height: 10px;
-  display: inline-block;
-  margin: 5px 8px;
-  border-radius: 50%;
-  background: #24495f;
-}
-
-.bench-breadboard strong {
-  display: block;
-  margin-top: 8px;
-  color: #5f4a00;
-  font-size: 13px;
-}
-
-.bench-checks {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.bench-checks span {
-  min-height: 48px;
-  background: #effbf4;
-  color: #17563d;
-}
-
-.landing-band {
-  padding-top: 34px;
-}
-
-.landing-band-heading {
-  max-width: 760px;
-  display: grid;
-  gap: 6px;
-}
-
-.landing-band-heading span {
-  color: var(--deep-blue);
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.landing-band-heading strong {
-  color: var(--heading);
-  font-size: 28px;
-  line-height: 1.1;
-}
-
-html[data-theme="dark"] .landing-shell {
-  background:
-    linear-gradient(180deg, rgba(8, 24, 39, 0.98), rgba(9, 18, 31, 0.98)),
-    repeating-linear-gradient(90deg, rgba(70, 199, 244, 0.08) 0 1px, transparent 1px 48px),
-    repeating-linear-gradient(0deg, rgba(70, 199, 244, 0.06) 0 1px, transparent 1px 48px);
-}
-
-html[data-theme="dark"] .landing-workbench,
-html[data-theme="dark"] .landing-kicker,
-html[data-theme="dark"] .landing-nav button,
-html[data-theme="dark"] .landing-secondary,
-html[data-theme="dark"] .bench-blocks {
-  background: #102133;
-}
-
-html[data-theme="dark"] .bench-surface {
-  background:
-    repeating-linear-gradient(90deg, rgba(70, 199, 244, 0.08) 0 1px, transparent 1px 32px),
-    repeating-linear-gradient(0deg, rgba(255, 213, 107, 0.08) 0 1px, transparent 1px 32px),
-    #0c1c2b;
-}
-
-html[data-theme="dark"] .bench-topline span,
-html[data-theme="dark"] .bench-checks span {
-  background: #12384d;
-  color: #dff5ff;
-}
-
-html[data-theme="dark"] .bench-breadboard {
-  background:
-    repeating-linear-gradient(90deg, transparent 0 16px, rgba(138, 217, 255, 0.14) 16px 18px),
-    #44330e;
-}
-
-html[data-theme="dark"] .landing-band-heading strong {
-  color: #f2fbff;
-}
-
 button,
 select,
 input {
@@ -928,11 +549,11 @@ button:disabled {
 
 .app-shell {
   min-height: 100vh;
+  background: var(--page-wash);
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: visible;
-  min-height: 100vh;
+  overflow: visible;
+  min-width: 0;
 }
 
 .topbar {
@@ -1122,14 +743,15 @@ button:disabled {
 
 .workspace-grid {
   min-height: 0;
-  flex: 1;
+  width: 100%;
   display: grid;
   grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(290px, 330px);
   gap: 14px;
   padding: 14px;
-  align-items: stretch;
-  overflow: auto;
+  align-items: start;
+  overflow: visible;
   min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .workspace-grid.mode-blocks.style-blocks {
@@ -1169,16 +791,17 @@ button:disabled {
 .right-panel {
   min-height: 0;
   min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .panel-section,
 .main-panel {
   min-height: 0;
-  height: 100%;
+  flex: 1;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -1188,6 +811,7 @@ button:disabled {
 .panel-section {
   display: flex;
   flex-direction: column;
+  flex: 0 0 auto;
   gap: 10px;
   padding: 12px;
   overflow: visible;
@@ -1932,17 +1556,21 @@ button:disabled {
 .main-panel {
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
   position: relative;
-  height: auto;
+  flex: 1;
   min-height: 0;
 }
 
 .block-studio {
   height: 100%;
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
   background:
     radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--piplup) 34%, transparent), transparent 22%),
     linear-gradient(180deg, color-mix(in srgb, var(--paper) 92%, var(--soft-blue)), var(--paper));
@@ -2028,6 +1656,7 @@ button:disabled {
 .block-studio-canvas {
   min-height: 0;
   min-width: 0;
+  height: 100%;
   padding: 0;
   background:
     linear-gradient(90deg, var(--block-dot) 0 1px, transparent 1px 24px),
@@ -2040,12 +1669,26 @@ button:disabled {
 .circuit-panel,
 .icon-workspace,
 .lessons-panel {
+  min-height: 0;
+  min-width: 0;
   height: 100%;
   width: 100%;
 }
 
 .blockly-host {
-  background: transparent;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.blockly-host {
+  background: var(--block-canvas);
+}
+
+.blockly-host .blocklySvg,
+.blockly-host svg {
+  background: var(--block-canvas);
 }
 
 .blockly-host .blocklyToolbox,
@@ -2230,6 +1873,7 @@ button:disabled {
 }
 
 .blockly-host .blocklyMainBackground {
+  fill: var(--block-canvas) !important;
   stroke: transparent !important;
 }
 
@@ -4451,6 +4095,7 @@ html[data-theme="dark"] .breadboard-model {
 }
 
 .board-terminal {
+  position: relative;
   min-height: 30px;
   display: grid;
   place-items: center;
@@ -4458,6 +4103,31 @@ html[data-theme="dark"] .breadboard-model {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
   font-weight: 800;
+}
+
+.wire-pin-label {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.wire-pin-input {
+  appearance: none;
+  width: 100%;
+  min-height: 30px;
+  border: 0;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--heading);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wire-pin-input:focus-visible {
+  outline: 2px solid var(--deep-blue);
+  outline-offset: 0;
 }
 
 .board-terminal.power {
@@ -5969,12 +5639,11 @@ html[data-theme="dark"] .breadboard-model {
     padding-inline: 22px;
   }
 
-  .landing-entry-grid {
+.landing-entry-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .app-shell {
-    height: auto;
     min-height: 100vh;
   }
 
@@ -6094,7 +5763,8 @@ html[data-theme="dark"] .breadboard-model {
 
   .workspace-grid {
     grid-template-columns: 1fr;
-    overflow: auto;
+    overflow: visible;
+    min-height: 0;
   }
 
   .workspace-grid.mode-blocks.style-blocks {
@@ -6107,7 +5777,7 @@ html[data-theme="dark"] .breadboard-model {
   .workspace-grid.mode-blocks.style-blocks .right-panel {
     padding: 0;
     border: 0;
-    overflow: auto;
+    overflow: visible;
   }
 
   .workspace-grid.mode-blocks.style-blocks .main-panel {
@@ -6165,9 +5835,12 @@ html[data-theme="dark"] .breadboard-model {
     font-size: 13px !important;
   }
 
-  .main-panel {
-    min-height: 620px;
+.main-panel {
+    min-height: 0;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: auto;
   }
 
   .left-panel,

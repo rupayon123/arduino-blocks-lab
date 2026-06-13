@@ -191,6 +191,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       if (blocksXml === lastWorkspaceXml.current) return;
       const nextProgram = workspaceToProgram(workspace, componentsRef.current);
       lastWorkspaceXml.current = blocksXml;
+      lastLoadedXml.current = blocksXml;
       try {
         onChangeRef.current(nextProgram, blocksXml);
         setWorkspaceError(null);
@@ -233,6 +234,14 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     }
   }, [syncProjectFromWorkspace]);
 
+  const syncWorkspaceRender = useCallback((workspace: Blockly.WorkspaceSvg) => {
+    try {
+      Blockly.svgResize(workspace);
+    } catch (error) {
+      console.error("Failed to resize Blockly workspace.", error);
+    }
+  }, []);
+
   useEffect(() => {
     setBlocklyComponentProvider(() => componentsRef.current);
     setBlocklyComponentDefinitionProvider(() => componentDefinitionsRef.current);
@@ -271,11 +280,15 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
         if (loadingRef.current || event.isUiEvent) return;
         scheduleSync(workspace);
       };
+      const resizeListener = () => syncWorkspaceRender(workspace);
       workspace.addChangeListener(listener);
+      window.addEventListener("resize", resizeListener);
+      syncWorkspaceRender(workspace);
       setWorkspaceError(null);
 
       return () => {
         workspace.removeChangeListener(listener);
+        window.removeEventListener("resize", resizeListener);
         workspace.dispose();
         workspaceRef.current = null;
       };
@@ -285,7 +298,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       console.error("Unable to initialize Blockly", error);
       workspaceRef.current = null;
     }
-  }, [themePreference, scheduleSync]);
+  }, [themePreference, scheduleSync, syncWorkspaceRender]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
@@ -305,6 +318,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
         if (prepared.warnings.length > 0) {
           setWorkspaceError(prepared.warnings.join(" "));
         }
+        syncWorkspaceRender(workspace);
         loadingRef.current = false;
         return;
       }
@@ -322,6 +336,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
         setWorkspaceError(null);
       }
       workspace.refreshToolboxSelection();
+      syncWorkspaceRender(workspace);
     } catch (error) {
       if (!mountedRef.current) return;
       console.error("Failed to load Blockly XML. Falling back to empty canvas.", error);
@@ -329,18 +344,20 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       lastLoadedXml.current = emptyBlocklyXml;
       lastReloadKey.current = reloadKey;
       syncProjectFromWorkspace(workspace);
+      syncWorkspaceRender(workspace);
       setWorkspaceError("Loaded an older/invalid blocks XML. Your project was restored as an empty canvas.");
     } finally {
       loadingRef.current = false;
     }
-  }, [reloadKey, xml, syncProjectFromWorkspace]);
+  }, [reloadKey, xml, syncProjectFromWorkspace, syncWorkspaceRender]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
     if (!mountedRef.current) return;
     workspace?.setTheme(blocklyThemeFor(themePreference));
     workspace?.refreshToolboxSelection();
-  }, [themePreference]);
+    if (workspace) syncWorkspaceRender(workspace);
+  }, [themePreference, syncWorkspaceRender]);
 
   useEffect(() => {
     setBlocklyComponentProvider(() => componentsRef.current);
@@ -349,11 +366,11 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
 
   return (
     <div className="block-studio">
-      <div className="block-studio-header">
-        <div>
-          <span>Blocks</span>
-          <strong>Arduino canvas</strong>
-        </div>
+        <div className="block-studio-header">
+          <div>
+            <span>Blocks</span>
+            <strong>Arduino canvas</strong>
+          </div>
         <div className="block-studio-pills" aria-label="Block editor status">
           {workspaceError ? <span className="block-studio-warning">{workspaceError}</span> : null}
           <span>{components.length} part{components.length === 1 ? "" : "s"}</span>

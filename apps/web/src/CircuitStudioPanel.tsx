@@ -32,6 +32,7 @@ import {
 } from "./circuitStudio";
 import type { PinValue } from "@abl/block-schema";
 import type { CircuitRuntimeSnapshot } from "./circuitRuntime";
+import type { WiringCanvasConnection, WiringCanvasModel } from "./wiringCanvas";
 
 type RuntimeBoardInput = {
   pin: string;
@@ -44,15 +45,22 @@ type Props = {
   generatedCode?: string;
   runtimeSnapshot?: CircuitRuntimeSnapshot;
   runtimeInputPins?: RuntimeBoardInput[];
+  wiring?: WiringCanvasModel;
+  boardPinOptions?: string[];
   onRunSimulation?: () => void;
+  onPauseSimulation?: () => void;
+  onSpeedChange?: (speedMs: number) => void;
+  simulationSpeedMs?: number;
+  isSimulationRunning?: boolean;
   onStepSimulation?: () => void;
   onResetSimulation?: () => void;
   onSetInput?: (pin: string, value: PinValue) => void;
+  onUpdateConnectionPin?: (instanceId: string, pinName: string, value: string) => void;
   onExportWokwiProject?: () => void;
   onOpenCode?: () => void;
 };
 
-type CircuitStudioView = "board" | "breadboard" | "bench";
+type CircuitStudioView = "guided" | "manual" | "threeD";
 
 function stepIcon(state: CircuitStudioStepState) {
   if (state === "done") return <CheckCircle2 size={16} />;
@@ -277,15 +285,22 @@ export default function CircuitStudioPanel({
   generatedCode,
   runtimeSnapshot,
   runtimeInputPins,
+  wiring,
+  boardPinOptions = [],
   onRunSimulation,
+  onPauseSimulation,
+  onSpeedChange,
+  simulationSpeedMs = 180,
+  isSimulationRunning = false,
   onStepSimulation,
   onResetSimulation,
   onSetInput,
+  onUpdateConnectionPin,
   onExportWokwiProject,
   onOpenCode
 }: Props) {
   const [controlState, setControlState] = useState<BenchControlState>({});
-  const [studioView, setStudioView] = useState<CircuitStudioView>("board");
+  const [studioView, setStudioView] = useState<CircuitStudioView>("guided");
   const [selectedBenchTestId, setSelectedBenchTestId] = useState<string>(model.benchTests[0]?.id ?? "");
   const [showProgramTrace, setShowProgramTrace] = useState(true);
   const boardInputPins = runtimeInputPins ?? [];
@@ -317,17 +332,17 @@ export default function CircuitStudioPanel({
   return (
     <div className="circuit-panel">
       <div className="circuit-view-tabs" role="tablist" aria-label="Circuit workspace mode">
-        <button className={studioView === "board" ? "active" : ""} type="button" onClick={() => setStudioView("board")}>
+        <button className={studioView === "guided" ? "active" : ""} type="button" onClick={() => setStudioView("guided")}>
           <Cpu size={15} />
-          Arduino Board
+          Guided Wiring
         </button>
-        <button className={studioView === "breadboard" ? "active" : ""} type="button" onClick={() => setStudioView("breadboard")}>
+        <button className={studioView === "manual" ? "active" : ""} type="button" onClick={() => setStudioView("manual")}>
           <TabletSmartphone size={15} />
-          Breadboard
+          Manual Wiring
         </button>
-        <button className={studioView === "bench" ? "active" : ""} type="button" onClick={() => setStudioView("bench")}>
+        <button className={studioView === "threeD" ? "active" : ""} type="button" onClick={() => setStudioView("threeD")}>
           <Wrench size={15} />
-          Virtual Bench
+          3D Preview
         </button>
       </div>
 
@@ -365,7 +380,7 @@ export default function CircuitStudioPanel({
             ))}
           </svg>
 
-          {studioView === "board" && (
+          {studioView === "guided" && (
             <div className="arduino-model">
               <span className="usb-port" />
               <strong>{model.boardName}</strong>
@@ -376,7 +391,7 @@ export default function CircuitStudioPanel({
             </div>
           )}
 
-          {studioView === "breadboard" && (
+          {studioView === "manual" && (
             <div className="circuit-floor-label" aria-hidden="true">
               Breadboard planning
             </div>
@@ -466,12 +481,19 @@ export default function CircuitStudioPanel({
               <span>Live path</span>
             </div>
             <div className="sim-control-row">
-              <button type="button" onClick={() => onRunSimulation?.()}>
-                <Play size={14} />
-                Run
-              </button>
+              {isSimulationRunning ? (
+                <button type="button" onClick={() => onPauseSimulation?.()}>
+                  <Pause size={14} />
+                  Pause
+                </button>
+              ) : (
+                <button type="button" onClick={() => onRunSimulation?.()}>
+                  <Play size={14} />
+                  Run
+                </button>
+              )}
               <button type="button" onClick={() => onStepSimulation?.()}>
-                <Pause size={14} />
+                <Zap size={14} />
                 Step
               </button>
               <button type="button" onClick={() => onResetSimulation?.()}>
@@ -479,6 +501,20 @@ export default function CircuitStudioPanel({
                 Reset
               </button>
             </div>
+            <label className="sim-speed-row" aria-label="Simulation speed">
+              <span>
+                Speed
+                <output>{`${Math.max(30, Math.min(1200, simulationSpeedMs))} ms`}</output>
+              </span>
+              <input
+                type="range"
+                min={60}
+                max={1200}
+                step={30}
+                value={Math.max(30, Math.min(1200, simulationSpeedMs))}
+                onChange={(event) => onSpeedChange?.(Number(event.currentTarget.value))}
+              />
+            </label>
             {runtimeWarnings.length > 0 && (
               <div className="simulation-warnings">
                 {runtimeWarnings.slice(-3).map((warning, index) => (
@@ -505,6 +541,57 @@ export default function CircuitStudioPanel({
               <div className="empty-row">Add connected input pins to test button/analog behavior from the simulation tab.</div>
             )}
           </section>
+
+          {wiring ? (
+            <section className="circuit-card">
+              <div className="circuit-card-heading">
+                <strong>Editable Wires</strong>
+                <span>{wiring.summary.total} wires</span>
+              </div>
+              {wiring.connections.length === 0 ? (
+                <div className="empty-row">No wire assignments yet.</div>
+              ) : (
+                <div className="wire-rows">
+                  {wiring.connections.map((connection) => (
+                    <div
+                      className={`wire-row ${connection.status} ${connection.boardPinKind}`}
+                      key={connection.id}
+                      title={`${connection.boardPinLabel} → ${connection.componentLabel} ${connection.wireLabel}${connection.note ? `: ${connection.note}` : ""}`}
+                    >
+                      {connection.editable ? (
+                        <label className={`board-terminal wire-pin-label ${connection.boardPinKind}`}>
+                          <input
+                            value={connection.boardPinId}
+                            list={`wire-pin-options-${connection.id}`}
+                            className="wire-pin-input"
+                            onChange={(event) =>
+                              onUpdateConnectionPin?.(connection.componentId, connection.pinKey, event.target.value)
+                            }
+                          />
+                          <datalist id={`wire-pin-options-${connection.id}`}>
+                            {boardPinOptions.map((pin) => (
+                              <option key={`${connection.id}-${pin}`} value={pin} />
+                            ))}
+                          </datalist>
+                        </label>
+                      ) : (
+                        <span className={`board-terminal ${connection.boardPinKind}`}>{connection.boardPinLabel}</span>
+                      )}
+                      <span className="wire-line" aria-hidden="true">
+                        <span />
+                      </span>
+                      <span className="component-terminal">
+                        <strong>{connection.componentLabel}</strong>
+                        <small>
+                          {connection.wireLabel}: {connection.wireFrom}
+                        </small>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
 
           <section className={`circuit-card breadboard-card ${model.breadboardPlan.tone}`}>
             <div className="circuit-card-heading">
@@ -577,9 +664,9 @@ export default function CircuitStudioPanel({
           <section className="circuit-card">
             <div className="circuit-card-heading">
               <strong>Run Preview</strong>
-              <span>{studioView === "bench" ? "Simulation controls" : `${model.events.length} beats`}</span>
+              <span>{studioView === "threeD" ? "Simulation controls" : `${model.events.length} beats`}</span>
             </div>
-            {studioView === "bench" ? (
+            {studioView === "threeD" ? (
               <div className="virtual-bench-console">
                 <button type="button" onClick={() => setShowProgramTrace((current) => !current)}>
                   <Play size={14} />
@@ -608,7 +695,7 @@ export default function CircuitStudioPanel({
                 )}
               </div>
             )}
-            {studioView === "bench" && (
+              {studioView === "threeD" && (
               <div className="code-trace-block">
                 <div className="circuit-card-heading">
                   <strong>Program Trace</strong>

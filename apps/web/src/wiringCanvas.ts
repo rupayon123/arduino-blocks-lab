@@ -10,6 +10,8 @@ export type WiringCanvasConnection = {
   componentLabel: string;
   componentName: string;
   componentCategory: ComponentDefinition["category"] | "unknown";
+  pinKey: string;
+  editable: boolean;
   wireLabel: string;
   wireFrom: string;
   wireTo: string;
@@ -45,6 +47,11 @@ function pinValue(value: PinValue | undefined): string {
   if (value === undefined) return "";
   if (typeof value === "boolean") return value ? "true" : "false";
   return String(value);
+}
+
+function extractPinNameFromTemplate(template: string) {
+  const match = /\{\{pins\.([a-zA-Z0-9_]+)\}\}/g.exec(template);
+  return match ? match[1] : null;
 }
 
 function renderPinTemplate(template: string, instance: ComponentInstance): string {
@@ -152,6 +159,13 @@ export function createWiringCanvasModel(
   const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
   const components: WiringCanvasComponent[] = [];
   const connections: WiringCanvasConnection[] = [];
+  const explicitAssignments = new Map(
+    (project.connections ?? []).map((assignment) => [
+      `${assignment.componentId}:${assignment.pin}`,
+      assignment.boardPin
+    ])
+  );
+  const usedExplicitAssignments = new Set<string>();
 
   for (const instance of project.components) {
     const definition = definitionsById.get(instance.componentId);
@@ -166,7 +180,16 @@ export function createWiringCanvasModel(
 
     if (!definition) continue;
     for (const [wireIndex, wire] of definition.wiring.entries()) {
-      const wireTo = renderPinTemplate(wire.to, instance);
+      const pinName = extractPinNameFromTemplate(wire.to);
+      const explicitKey = pinName ? `${instance.id}:${pinName}` : null;
+      const pinKey = pinName ?? `wire-${wireIndex}`;
+      const explicitPin = explicitKey ? explicitAssignments.get(explicitKey) : undefined;
+
+      if (pinName) {
+        usedExplicitAssignments.add(`${instance.id}:${pinName}`);
+      }
+
+      const wireTo = explicitPin ?? renderPinTemplate(wire.to, instance);
       const target = resolveBoardTarget(wireTo, board);
       connections.push({
         id: `${instance.id}-${wireIndex}-${wire.label}`,
@@ -174,9 +197,11 @@ export function createWiringCanvasModel(
         componentLabel: instance.label,
         componentName: definition.name,
         componentCategory: definition.category,
+        pinKey,
+        editable: Boolean(pinName),
         wireLabel: wire.label,
         wireFrom: wire.from,
-        wireTo,
+        wireTo: wireTo,
         boardPinId: target.boardPinId,
         boardPinLabel: target.boardPinLabel,
         boardPinKind: target.boardPinKind,
@@ -184,6 +209,72 @@ export function createWiringCanvasModel(
         ...(wire.note || target.note ? { note: wire.note ?? target.note } : {})
       });
     }
+
+    for (const assignment of project.connections ?? []) {
+      if (assignment.componentId !== instance.id) continue;
+      const explicitKey = `${assignment.componentId}:${assignment.pin}`;
+      if (definition.wiring.some((wire) => extractPinNameFromTemplate(wire.to) === assignment.pin)) continue;
+      if (usedExplicitAssignments.has(explicitKey)) continue;
+
+      const target = resolveBoardTarget(assignment.boardPin, board);
+      connections.push({
+        id: `extra-${assignment.id ?? `custom-${instance.id}-${assignment.pin}`}`,
+        componentId: instance.id,
+        componentLabel: instance.label,
+        componentName: definition.name,
+        componentCategory: definition.category,
+        pinKey: assignment.pin,
+        editable: true,
+        wireLabel: `${assignment.pin} (custom)`,
+        wireFrom: "custom pin",
+        wireTo: assignment.boardPin,
+        boardPinId: target.boardPinId,
+        boardPinLabel: target.boardPinLabel,
+        boardPinKind: target.boardPinKind,
+        status: target.status,
+        ...(assignment.pin in instance.pins ? { note: "Connected from this project's wiring assignment." } : { note: "Custom pin assignment on this project." })
+      });
+      usedExplicitAssignments.add(explicitKey);
+    }
+  }
+
+  for (const assignment of project.connections ?? []) {
+    if (project.components.some((instance) => instance.id === assignment.componentId)) continue;
+    const target = resolveBoardTarget(assignment.boardPin, board);
+    const syntheticComponentLabel = `Component ${assignment.componentId}`;
+    const syntheticName = "Unknown component";
+    const syntheticCategory = "unknown" as const;
+    const syntheticPinKey = `${assignment.pin}`;
+    const assignmentKey = `${assignment.componentId}:${assignment.pin}`;
+    if (usedExplicitAssignments.has(assignmentKey)) continue;
+
+    components.push({
+      id: assignment.componentId,
+      label: syntheticComponentLabel,
+      name: syntheticName,
+      category: syntheticCategory,
+      connectionCount: 0,
+      missingDefinition: true
+    });
+
+    connections.push({
+      id: `orphan-${assignment.id ?? `${assignment.componentId}-${assignment.pin}`}`,
+      componentId: assignment.componentId,
+      componentLabel: syntheticComponentLabel,
+      componentName: syntheticName,
+      componentCategory: syntheticCategory,
+      pinKey: syntheticPinKey,
+      editable: true,
+      wireLabel: `${assignment.pin} (custom)`,
+      wireFrom: "custom pin",
+      wireTo: assignment.boardPin,
+      boardPinId: target.boardPinId,
+      boardPinLabel: target.boardPinLabel,
+      boardPinKind: target.boardPinKind,
+      status: target.status,
+      note: "Component no longer has matching catalog definition."
+    });
+    usedExplicitAssignments.add(assignmentKey);
   }
 
   const markedConnections = markSharedPins(connections);

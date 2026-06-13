@@ -57,6 +57,7 @@ export type CircuitRuntimeController = {
   run: (maxOperations?: number) => CircuitRuntimeSnapshot;
   step: () => CircuitRuntimeSnapshot;
   reset: (state?: SimulationState) => void;
+  pause: () => void;
   setInput: (target: string, value: PinValue) => void;
   setInputs: (inputs: Record<string, PinValue>) => void;
   setComponentState: (componentId: string, key: string, value: PinValue) => void;
@@ -838,6 +839,10 @@ export function createCircuitRuntime(config: RuntimeConfig): CircuitRuntimeContr
     return getSnapshot();
   }
 
+  function pause() {
+    state.running = false;
+  }
+
   function getSnapshot(): CircuitRuntimeSnapshot {
     return {
       pinValues: { ...state.pinValues },
@@ -892,6 +897,7 @@ export function createCircuitRuntime(config: RuntimeConfig): CircuitRuntimeContr
     run: (maxOperations = MAX_RUN_STEPS) => runStep(maxOperations),
     step: () => runStep(1),
     reset: (nextState) => resetState(nextState),
+    pause,
     setInput,
     setInputs,
     setComponentState,

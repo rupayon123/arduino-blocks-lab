@@ -32,6 +32,7 @@ import {
   Share2,
   Sparkles,
   SquareStack,
+  Text,
   Sun,
   Terminal,
   Trash2,
@@ -44,6 +45,8 @@ import type {
   ComponentDefinition,
   ComponentInstance,
   ExtensionManifest,
+  CircuitConnection,
+  BoardDefinition,
   PinAssignment,
   PinValue,
   ProjectDocument,
@@ -141,13 +144,13 @@ const projectStyleOptions: Array<{
     id: "icon",
     title: "Icon Blocks",
     kicker: "picture-first",
-    detail: "Start with guided starter blocks and friendly visual cues."
+    detail: "Build with icon-plus-word blocks and guided steps."
   },
   {
     id: "blocks",
-    title: "Blocks",
+    title: "Word Blocks",
     kicker: "blocks-first",
-    detail: "Build with full coding blocks and live Arduino C++ preview."
+    detail: "Build with word-style blocks and live Arduino C++ preview."
   },
   {
     id: "code",
@@ -364,6 +367,38 @@ function coercePinValue(value: string) {
   if (trimmed === "false") return false;
   if (/^-?\d+$/.test(trimmed)) return Number(trimmed);
   return trimmed;
+}
+
+function normalizeBoardPinInput(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (/^d(\d+)$/i.test(trimmed)) return trimmed.toUpperCase();
+  return trimmed.toUpperCase();
+}
+
+function ensureConnectionEntry(
+  connection: Partial<CircuitConnection> | undefined,
+  fallbackId: string
+): CircuitConnection {
+  const boardPin = String(connection?.boardPin ?? "").trim();
+  return {
+    id: String(connection?.id ?? "").trim() || fallbackId,
+    componentId: String(connection?.componentId ?? "").trim(),
+    pin: String(connection?.pin ?? "").trim(),
+    boardPin: boardPin
+  };
+}
+
+function boardPinOptions(board: BoardDefinition | undefined) {
+  if (!board) return [];
+  const optional = Array.from(new Set(["5V", "3V3", "3.3V", "GND", "VIN", "VCC"]));
+  const busPins = ["SDA", "SCL", "SCK", "MOSI", "MISO"];
+  const i2cPins = board.i2cPins ? [board.i2cPins.sda, board.i2cPins.scl] : [];
+  const spiPins = board.spiPins ? [board.spiPins.mosi, board.spiPins.miso, board.spiPins.sck] : [];
+
+  return Array.from(
+    new Set([...board.digitalPins, ...board.analogPins, ...i2cPins, ...spiPins, ...busPins, ...optional])
+  ).filter((value) => value.length > 0);
 }
 
 function loadMissionProgress(): Record<string, boolean> {
@@ -591,6 +626,7 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const extensionInputRef = useRef<HTMLInputElement | null>(null);
   const circuitRuntimeRef = useRef<CircuitRuntimeController | null>(null);
+  const simulationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [runtimeSnapshot, setRuntimeSnapshot] = useState<CircuitRuntimeSnapshot>(() => ({
     pinValues: project.simulationState?.pinValues ?? {},
     componentState: project.simulationState?.componentState ?? {},
@@ -600,6 +636,8 @@ export default function App() {
     delayRemainingMs: project.simulationState?.delayRemainingMs ?? 0,
     warnings: []
   }));
+  const [simulationRunning, setSimulationRunning] = useState(false);
+  const [simulationSpeedMs, setSimulationSpeedMs] = useState(180);
   const runtimeInputPins = useMemo(() => boardInputsFromConnections(project, project.components), [project]);
 
   const activeCatalog = useMemo(() => {
@@ -610,6 +648,7 @@ export default function App() {
   const editorCode = codeView === "cpp" ? generated.code : learningPreview(project, codeView, activeCatalog);
   const editorLanguage = codeView === "cpp" ? "cpp" : codeView;
   const selectedBoard = activeCatalog.boards.find((board) => board.id === project.boardId) ?? activeCatalog.boards[0];
+  const boardPinsForWiring = useMemo(() => boardPinOptions(selectedBoard), [selectedBoard]);
   const effectiveFqbn = targetLabel(project.boardId, selectedFqbn, activeCatalog);
   const selectedCoreTarget = useMemo(() => coreFromFqbn(effectiveFqbn), [effectiveFqbn]);
   const selectedCore = selectedCoreTarget?.core ?? "";
@@ -682,6 +721,93 @@ export default function App() {
       cancelled = true;
     };
   }, [activeCatalog.components, circuitRuntimeSeed, project.boardId, project.components, project.pinAssignments, project.program, project.connections]);
+
+  const stopSimulationLoop = useCallback(() => {
+    if (simulationIntervalRef.current !== null) {
+      clearInterval(simulationIntervalRef.current);
+      simulationIntervalRef.current = null;
+    }
+    setSimulationRunning(false);
+  }, []);
+
+  const runSimulationStep = useCallback(
+    (runtime: CircuitRuntimeController, maxOperations: number) => {
+      const snapshot = runtime.run(maxOperations);
+      persistRuntimeSnapshot(snapshot);
+      if (snapshot.halted || !snapshot.running || runtime.isStopped()) {
+        stopSimulationLoop();
+      }
+    },
+    [stopSimulationLoop]
+  );
+
+  const startSimulationLoop = useCallback(() => {
+    const runtime = circuitRuntimeRef.current;
+    if (!runtime) return;
+
+    if (runtime.getSnapshot().halted === "done" || runtime.getSnapshot().halted === "blocked") {
+      runtime.reset();
+      const resetSnapshot = runtime.getSnapshot();
+      persistRuntimeSnapshot(resetSnapshot);
+    }
+
+    runSimulationStep(runtime, 10);
+    if (runtime.isStopped()) {
+      setSimulationRunning(false);
+      return;
+    }
+
+    stopSimulationLoop();
+    const speed = Math.max(60, Math.min(1200, simulationSpeedMs));
+    simulationIntervalRef.current = setInterval(() => {
+      const nextRuntime = circuitRuntimeRef.current;
+      if (!nextRuntime || nextRuntime.isStopped()) {
+        stopSimulationLoop();
+        return;
+      }
+      runSimulationStep(nextRuntime, 10);
+    }, speed);
+  }, [runSimulationStep, simulationSpeedMs, stopSimulationLoop]);
+
+  useEffect(() => {
+    if (mode !== "circuit") {
+      setSimulationRunning(false);
+      stopSimulationLoop();
+      return;
+    }
+
+    if (!simulationRunning) {
+      stopSimulationLoop();
+      return;
+    }
+
+    startSimulationLoop();
+    return () => {
+      stopSimulationLoop();
+    };
+  }, [mode, simulationRunning, startSimulationLoop, stopSimulationLoop]);
+
+  useEffect(() => {
+    return () => {
+      stopSimulationLoop();
+    };
+  }, [stopSimulationLoop]);
+
+  useEffect(() => {
+    if (!simulationRunning) return;
+    if (circuitRuntimeRef.current?.isStopped()) {
+      stopSimulationLoop();
+    }
+  }, [runtimeSnapshot.halted, runtimeSnapshot.running, simulationRunning, stopSimulationLoop]);
+
+  const clearSimulationRuntime = useCallback(() => {
+    stopSimulationLoop();
+    const runtime = circuitRuntimeRef.current;
+    if (!runtime) return;
+    runtime.reset();
+    const snapshot = runtime.getSnapshot();
+    persistRuntimeSnapshot(snapshot);
+  }, [stopSimulationLoop]);
 
   const uploadReadiness = useMemo(
     () =>
@@ -834,9 +960,9 @@ export default function App() {
           : `${wiringCanvas.summary.total} ready`;
   const activeStyleOption = projectStyleOptions.find((option) => option.id === projectStyle) ?? {
     id: "blocks",
-    title: "Blocks",
+    title: "Word Blocks",
     kicker: "scratch-style",
-    detail: "Build with full coding blocks and live Arduino C++."
+    detail: "Build with word-style blocks and live Arduino C++."
   };
   const missionProgression = useMemo(() => createMissionProgression(activeCatalog.lessons, missionProgress), [activeCatalog.lessons, missionProgress]);
   const teacherUnitPlan = useMemo(() => createUnitPlan(activeCatalog.lessons, activeCatalog), [activeCatalog]);
@@ -916,13 +1042,35 @@ export default function App() {
   function runSimulation() {
     const runtime = circuitRuntimeRef.current;
     if (!runtime) return;
-    const snapshot = runtime.run();
-    persistRuntimeSnapshot(snapshot);
+    const snapshot = runtime.getSnapshot();
+    if (snapshot.halted === "done" || snapshot.halted === "blocked") {
+      runtime.reset();
+      const resetSnapshot = runtime.getSnapshot();
+      persistRuntimeSnapshot(resetSnapshot);
+    }
+    setSimulationRunning(true);
+  }
+
+  function pauseSimulation() {
+    const runtime = circuitRuntimeRef.current;
+    runtime?.pause();
+    stopSimulationLoop();
+    setSimulationRunning(false);
+    if (runtime) {
+      const snapshot = runtime.getSnapshot();
+      persistRuntimeSnapshot(snapshot);
+    }
   }
 
   function stepSimulation() {
     const runtime = circuitRuntimeRef.current;
     if (!runtime) return;
+    stopSimulationLoop();
+    setSimulationRunning(false);
+    const currentSnapshot = runtime.getSnapshot();
+    if (currentSnapshot.halted === "done" || currentSnapshot.halted === "blocked") {
+      runtime.reset();
+    }
     const snapshot = runtime.step();
     persistRuntimeSnapshot(snapshot);
   }
@@ -930,6 +1078,8 @@ export default function App() {
   function resetSimulation() {
     const runtime = circuitRuntimeRef.current;
     if (!runtime) return;
+    stopSimulationLoop();
+    setSimulationRunning(false);
     runtime.reset();
     const snapshot = runtime.getSnapshot();
     persistRuntimeSnapshot(snapshot);
@@ -1154,6 +1304,57 @@ export default function App() {
         )
       })
     );
+  }
+
+  function updateConnectionPin(instanceId: string, pinName: string, value: string) {
+    const nextPin = normalizeBoardPinInput(value);
+    setProject((current) => {
+      const connectionSeed = `${current.boardId}-${instanceId}-${pinName}`;
+      const existingConnections = [...(current.connections ?? current.pinAssignments ?? [])];
+      const nextConnections: CircuitConnection[] = existingConnections.map((connection, index) =>
+        ensureConnectionEntry(connection, `${connectionSeed}-${index}`)
+      );
+      const assignmentIndex = nextConnections.findIndex(
+        (connection) => connection.componentId === instanceId && connection.pin === pinName
+      );
+
+      if (nextPin) {
+        if (assignmentIndex >= 0) {
+          const currentConnection = nextConnections[assignmentIndex]!;
+          nextConnections[assignmentIndex] = {
+            id: currentConnection.id,
+            componentId: currentConnection.componentId,
+            pin: currentConnection.pin,
+            boardPin: nextPin,
+          };
+        } else {
+          const generatedId = typeof crypto === "undefined"
+            ? `${connectionSeed}-${Date.now()}`
+            : `${connectionSeed}-${crypto.randomUUID()}`;
+
+          nextConnections.push(ensureConnectionEntry(
+            {
+              componentId: instanceId,
+              pin: pinName,
+              boardPin: nextPin
+            },
+            generatedId
+          ));
+        }
+      } else if (assignmentIndex >= 0) {
+        nextConnections.splice(assignmentIndex, 1);
+      }
+
+      return mergeProjectWiring({
+        ...current,
+        components: current.components.map((component) =>
+          component.id === instanceId
+            ? { ...component, pins: nextPin ? { ...component.pins, [pinName]: nextPin } : { ...component.pins, [pinName]: "" } }
+            : component
+        ),
+        connections: nextConnections
+      });
+    });
   }
 
   function applyAutoPins() {
@@ -1610,7 +1811,7 @@ export default function App() {
               }}
             >
               <SquareStack size={18} />
-              Blocks
+              Word Blocks
             </button>
             <button className={mode === "code" ? "active" : ""} onClick={() => setMode("code")}>
               <Code2 size={18} />
@@ -1707,13 +1908,19 @@ export default function App() {
               onClick={() => applyProjectStyle(option.id)}
               title={option.title}
             >
-              {option.id === "code" ? <Code2 size={15} /> : <SquareStack size={15} />}
-              <span>{option.id === "icon" ? "Icon Blocks" : option.id === "blocks" ? "Blocks" : "Arduino C++"}</span>
+              {option.id === "code" ? (
+                <Code2 size={15} />
+              ) : option.id === "icon" ? (
+                <Text size={15} />
+              ) : (
+                <SquareStack size={15} />
+              )}
+              <span>{option.id === "icon" ? "Icon Blocks" : option.id === "blocks" ? "Word Blocks" : "Arduino C++"}</span>
             </button>
           ))}
         </div>
         <span>
-          {projectStyle === "code" ? <Code2 size={16} /> : <SquareStack size={16} />}
+          {projectStyle === "code" ? <Code2 size={16} /> : projectStyle === "icon" ? <Text size={16} /> : <SquareStack size={16} />}
           {activeStyleOption.title}
         </span>
         <span>
@@ -1962,9 +2169,16 @@ export default function App() {
               runtimeSnapshot={runtimeSnapshot}
               runtimeInputPins={runtimeInputPins}
               onRunSimulation={runSimulation}
+              onPauseSimulation={pauseSimulation}
+              onSpeedChange={setSimulationSpeedMs}
+              simulationSpeedMs={simulationSpeedMs}
+              isSimulationRunning={simulationRunning}
               onStepSimulation={stepSimulation}
               onResetSimulation={resetSimulation}
               onSetInput={setRuntimeInput}
+              wiring={wiringCanvas}
+              boardPinOptions={boardPinsForWiring}
+              onUpdateConnectionPin={updateConnectionPin}
               onExportWokwiProject={() => void exportWokwiProject()}
               onOpenCode={() => {
                 setCodeView("cpp");
@@ -2341,7 +2555,23 @@ export default function App() {
                       key={connection.id}
                       title={`${connection.boardPinLabel} -> ${connection.componentLabel} ${connection.wireLabel}${connection.note ? `: ${connection.note}` : ""}`}
                     >
-                      <span className={`board-terminal ${connection.boardPinKind}`}>{connection.boardPinLabel}</span>
+                      {connection.editable ? (
+                        <label className={`board-terminal wire-pin-label ${connection.boardPinKind}`}>
+                          <input
+                            value={connection.boardPinId}
+                            list={`wire-pin-options-${connection.id}`}
+                            className="wire-pin-input"
+                            onChange={(event) => updateConnectionPin(connection.componentId, connection.pinKey, event.target.value)}
+                          />
+                          <datalist id={`wire-pin-options-${connection.id}`}>
+                            {boardPinOptions(selectedBoard).map((pin) => (
+                              <option key={`${connection.id}-${pin}`} value={pin} />
+                            ))}
+                          </datalist>
+                        </label>
+                      ) : (
+                        <span className={`board-terminal ${connection.boardPinKind}`}>{connection.boardPinLabel}</span>
+                      )}
                       <span className="wire-line" aria-hidden="true">
                         <span />
                       </span>

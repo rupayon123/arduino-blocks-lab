@@ -10,7 +10,7 @@ describe("agent origin policy", () => {
   });
 
   it("allows non-browser tools without an Origin header", () => {
-    expect(isAllowedOrigin(undefined)).toBe(true);
+    expect(isAllowedOrigin(undefined)).toBe(false);
   });
 
   it("blocks unrelated browser origins from driving the local agent", () => {
