@@ -97,10 +97,10 @@ function sanitizeBlocklyXml(rawXml: string) {
     if (!type || knownBlockTypes.has(type)) continue;
 
     removed += 1;
-    const nextBlock = block.querySelector("next > block")?.cloneNode(true) as Element | null;
+    const nextBlock = block.querySelector("> next > block") as Element | null;
 
     if (nextBlock && block.parentNode) {
-      block.replaceWith(nextBlock);
+      block.parentNode.replaceChild(nextBlock, block);
       continue;
     }
 
