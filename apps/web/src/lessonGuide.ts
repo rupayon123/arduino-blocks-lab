@@ -18,8 +18,9 @@ export type LessonGuide = {
 };
 
 export function lessonLevelLabel(level: LessonDefinition["level"]) {
-  if (level === "icon") return "Icon blocks";
-  if (level === "word") return "Blocks";
+  const normalized = String(level).toLowerCase();
+  if (normalized === "icon") return "Icon blocks";
+  if (normalized === "word" || normalized === "blocks") return "Blocks";
   return "Arduino C++";
 }
 
