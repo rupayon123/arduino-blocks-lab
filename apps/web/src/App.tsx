@@ -39,7 +39,16 @@ import {
   X,
   AlertTriangle
 } from "lucide-react";
-import type { Catalog, ComponentDefinition, ComponentInstance, ExtensionManifest, ProjectDocument, ProgramStep } from "@abl/block-schema";
+import type {
+  Catalog,
+  ComponentDefinition,
+  ComponentInstance,
+  ExtensionManifest,
+  PinAssignment,
+  PinValue,
+  ProjectDocument,
+  ProgramStep
+} from "@abl/block-schema";
 import {
   boards as defaultBoards,
   catalog as defaultCatalog,
@@ -69,6 +78,7 @@ import { parsePackGallery, resolveGalleryPackUrl, type PackGalleryEntry } from "
 import { createWiringCanvasModel } from "./wiringCanvas";
 import { nextThemePreference, parseThemePreference, type ThemePreference } from "./theme";
 import { createCircuitStudioModel } from "./circuitStudio";
+import { createCircuitRuntime, type CircuitRuntimeController, type CircuitRuntimeSnapshot } from "./circuitRuntime";
 import CircuitStudioPanel from "./CircuitStudioPanel";
 import IconBlocksPanel from "./IconBlocksPanel";
 import { coreFromFqbn } from "./arduinoCore";
@@ -135,9 +145,9 @@ const projectStyleOptions: Array<{
   },
   {
     id: "blocks",
-    title: "Blocks",
-    kicker: "scratch-style",
-    detail: "Build with full Blockly blocks and live Arduino C++."
+    title: "Word Blocks",
+    kicker: "word-first blocks",
+    detail: "Build with full block words and live Arduino C++."
   },
   {
     id: "code",
@@ -146,6 +156,79 @@ const projectStyleOptions: Array<{
     detail: "Open the generated sketch as the main workspace."
   }
 ];
+
+const ignoredPinKeys = new Set(["ground", "power", "type", "address", "count", "columns", "rows", "width", "height"]);
+
+function boardPinFromValue(pinValue: unknown): string | null {
+  if (typeof pinValue === "boolean" || pinValue === undefined || pinValue === null) return null;
+  const text = String(pinValue).trim();
+  return text.length ? text : null;
+}
+
+function makePinAssignmentId(componentId: string, pinName: string, fallback: number) {
+  return `${componentId}-${pinName}-${fallback}`;
+}
+
+function normalizePinAssignments(components: ProjectDocument["components"]): PinAssignment[] {
+  const assignments: PinAssignment[] = [];
+  const seen = new Set<string>();
+
+  components.forEach((component, componentIndex) => {
+    Object.entries(component.pins).forEach(([pinName, pinValue]) => {
+      if (ignoredPinKeys.has(pinName)) return;
+      const boardPin = boardPinFromValue(pinValue);
+      if (!boardPin) return;
+
+      const key = `${component.id}:${pinName}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      assignments.push({
+        id: makePinAssignmentId(component.id, pinName, componentIndex),
+        componentId: component.id,
+        pin: pinName,
+        boardPin
+      });
+    });
+  });
+
+  return assignments;
+}
+
+function mergeProjectWiring(project: ProjectDocument): ProjectDocument {
+  const pinAssignments = normalizePinAssignments(project.components);
+  const knownLayers = new Set(["board", "breadboard", "three-d"] as const);
+  const componentPlacementById = new Map(project.componentPlacement?.map((placement) => [placement.componentId, placement]));
+
+  return {
+    ...project,
+    pinAssignments,
+    connections: pinAssignments.map((assignment, index) => ({
+      ...assignment,
+      id: assignment.id || `${project.boardId}-${assignment.componentId}-${assignment.pin}-${index}`,
+      boardPin: assignment.boardPin.trim()
+    })),
+    componentPlacement: project.components.map((component, index) => {
+      const existing = componentPlacementById.get(component.id);
+      if (!existing || !Number.isFinite(existing.x) || !Number.isFinite(existing.y)) {
+        return {
+          componentId: component.id,
+          x: 16 + (index % 4) * 18,
+          y: 20 + Math.floor(index / 4) * 20,
+          rotation: 0,
+          layer: "board"
+        };
+      }
+      return {
+        componentId: component.id,
+        x: existing.x,
+        y: existing.y,
+        rotation: existing.rotation ?? 0,
+        layer: knownLayers.has(existing.layer ?? "board") ? existing.layer ?? "board" : "board"
+      };
+    })
+  };
+}
 
 function cloneProject(project: ProjectDocument): ProjectDocument {
   const cloned = JSON.parse(JSON.stringify(project)) as ProjectDocument;
@@ -233,6 +316,34 @@ function flattenBoardTargets(data: unknown): BoardTarget[] {
     .slice(0, 80);
 }
 
+function normalizeBoardPin(value: string) {
+  return value.trim().toUpperCase().replace(/^D(\d+)$/i, "$1");
+}
+
+function isPowerPin(pin: string) {
+  const upper = pin.toUpperCase();
+  return upper === "GND" || upper === "5V" || upper === "3V3" || upper === "3.3V" || upper === "VIN";
+}
+
+function boardInputsFromConnections(project: ProjectDocument, components: ComponentInstance[]) {
+  const seen = new Set<string>();
+  const componentNames = new Map(components.map((instance) => [instance.id, instance.label]));
+
+  const base = project.connections && project.connections.length > 0 ? project.connections : project.pinAssignments ?? [];
+  return base
+    .map((assignment) => ({
+      pin: normalizeBoardPin(assignment.boardPin),
+      componentLabel: componentNames.get(assignment.componentId) ?? assignment.componentId,
+      pinName: assignment.pin
+    }))
+    .filter((entry) => !isPowerPin(entry.pin) && entry.pin)
+    .filter((entry) => {
+      if (seen.has(entry.pin)) return false;
+      seen.add(entry.pin);
+      return true;
+    });
+}
+
 
 function saveBlob(filename: string, contents: string | Blob, type: string) {
   const blob = contents instanceof Blob ? contents : new Blob([contents], { type });
@@ -289,7 +400,8 @@ function loadSharedProject(): ProjectDocument | undefined {
 }
 
 function loadInitialProject(): ProjectDocument {
-  return loadSharedProject() ?? loadCurrentProject() ?? starterProjects.blink;
+  const raw = loadSharedProject() ?? loadCurrentProject() ?? starterProjects.blink;
+  return mergeProjectWiring(cloneProject(raw));
 }
 
 function shouldShowLandingPage() {
@@ -478,6 +590,17 @@ export default function App() {
   const [packGalleryStatus, setPackGalleryStatus] = useState("Loading gallery");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const extensionInputRef = useRef<HTMLInputElement | null>(null);
+  const circuitRuntimeRef = useRef<CircuitRuntimeController | null>(null);
+  const [runtimeSnapshot, setRuntimeSnapshot] = useState<CircuitRuntimeSnapshot>(() => ({
+    pinValues: project.simulationState?.pinValues ?? {},
+    componentState: project.simulationState?.componentState ?? {},
+    serialLog: project.simulationState?.serialLog ?? [],
+    running: false,
+    stepIndex: project.simulationState?.stepIndex ?? 0,
+    delayRemainingMs: project.simulationState?.delayRemainingMs ?? 0,
+    warnings: []
+  }));
+  const runtimeInputPins = useMemo(() => boardInputsFromConnections(project, project.components), [project]);
 
   const activeCatalog = useMemo(() => {
     return extensionPacks.reduce((current, pack) => mergeExtensionManifest(current, pack.manifest).catalog, defaultCatalog);
@@ -515,6 +638,33 @@ export default function App() {
       }),
     [activeCatalog.components, project, selectedBoard, wiringCanvas, wiringDiagnostics]
   );
+  const circuitRuntimeSeed = useMemo(
+    () =>
+      JSON.stringify({
+        boardId: project.boardId,
+        components: project.components,
+        program: project.program,
+        connections: project.connections ?? project.pinAssignments ?? []
+      }),
+    [project.boardId, project.components, project.program, project.connections, project.pinAssignments]
+  );
+  useEffect(() => {
+    const runtime = createCircuitRuntime({
+      project: {
+        components: project.components,
+        program: project.program,
+        pinAssignments: project.pinAssignments,
+        connections: project.connections,
+        simulationState: project.simulationState
+      },
+      definitions: activeCatalog.components,
+      initialState: project.simulationState
+    });
+
+    circuitRuntimeRef.current = runtime;
+    setRuntimeSnapshot(runtime.getSnapshot());
+  }, [activeCatalog.components, circuitRuntimeSeed, project.boardId, project.components, project.pinAssignments, project.program, project.connections]);
+
   const uploadReadiness = useMemo(
     () =>
       collectUploadReadiness({
@@ -666,9 +816,9 @@ export default function App() {
           : `${wiringCanvas.summary.total} ready`;
   const activeStyleOption = projectStyleOptions.find((option) => option.id === projectStyle) ?? {
     id: "blocks",
-    title: "Blocks",
+    title: "Word Blocks",
     kicker: "scratch-style",
-    detail: "Build with full Blockly blocks and live Arduino C++."
+    detail: "Build with full Blockly-style words and live Arduino C++."
   };
   const missionProgression = useMemo(() => createMissionProgression(activeCatalog.lessons, missionProgress), [activeCatalog.lessons, missionProgress]);
   const teacherUnitPlan = useMemo(() => createUnitPlan(activeCatalog.lessons, activeCatalog), [activeCatalog]);
@@ -722,6 +872,51 @@ export default function App() {
     });
   }, [activeCatalog]);
 
+  function persistRuntimeSnapshot(snapshot: CircuitRuntimeSnapshot) {
+    setRuntimeSnapshot(snapshot);
+    setProject((current) => ({
+      ...current,
+      simulationState: {
+        pinValues: snapshot.pinValues,
+        componentState: snapshot.componentState,
+        serialLog: snapshot.serialLog,
+        running: snapshot.running,
+        stepIndex: snapshot.stepIndex,
+        delayRemainingMs: snapshot.delayRemainingMs
+      }
+    }));
+  }
+
+  function setRuntimeInput(pin: string, value: PinValue) {
+    const runtime = circuitRuntimeRef.current;
+    if (!runtime) return;
+    runtime.setInput(pin, value);
+    const snapshot = runtime.getSnapshot();
+    persistRuntimeSnapshot(snapshot);
+  }
+
+  function runSimulation() {
+    const runtime = circuitRuntimeRef.current;
+    if (!runtime) return;
+    const snapshot = runtime.run();
+    persistRuntimeSnapshot(snapshot);
+  }
+
+  function stepSimulation() {
+    const runtime = circuitRuntimeRef.current;
+    if (!runtime) return;
+    const snapshot = runtime.step();
+    persistRuntimeSnapshot(snapshot);
+  }
+
+  function resetSimulation() {
+    const runtime = circuitRuntimeRef.current;
+    if (!runtime) return;
+    runtime.reset();
+    const snapshot = runtime.getSnapshot();
+    persistRuntimeSnapshot(snapshot);
+    setAgentLog((current) => ["Circuit simulation reset.", ...current].slice(0, 80));
+  }
   useEffect(() => {
     void refreshAgent();
   }, []);
@@ -844,7 +1039,7 @@ export default function App() {
   }
 
   function loadProject(nextProject: ProjectDocument, nextStyle: ProjectStyle = projectStyle) {
-    setProject(cloneProject(nextProject));
+    setProject(mergeProjectWiring(cloneProject(nextProject)));
     setReloadKey(crypto.randomUUID());
     applyProjectStyle(nextStyle);
   }
@@ -863,11 +1058,14 @@ export default function App() {
       name: "Project 1",
       lessonId: undefined
     });
-    setProject(nextProject);
+    setProject(mergeProjectWiring(nextProject));
     setReloadKey(crypto.randomUUID());
     applyProjectStyle(newProjectStyle);
     setNewProjectOpen(false);
-    setAgentLog((current) => [`Created Project 1 in ${projectStyleOptions.find((option) => option.id === newProjectStyle)?.title ?? "Blocks"}.`, ...current]);
+    setAgentLog((current) => [
+      `Created Project 1 in ${projectStyleOptions.find((option) => option.id === newProjectStyle)?.title ?? "Text Blocks"}.`,
+      ...current
+    ]);
   }
 
   function loadIdeaProject(idea: ProjectIdea) {
@@ -912,31 +1110,37 @@ export default function App() {
 
   function addComponent(definition: ComponentDefinition) {
     const instance = createComponentInstance(definition);
-    setProject((current) => ({
-      ...current,
-      components: [...current.components, instance]
-    }));
+    setProject((current) =>
+      mergeProjectWiring({
+        ...current,
+        components: [...current.components, instance]
+      })
+    );
   }
 
   function removeComponent(instanceId: string) {
-    setProject((current) => ({
-      ...current,
-      components: current.components.filter((component) => component.id !== instanceId)
-    }));
+    setProject((current) =>
+      mergeProjectWiring({
+        ...current,
+        components: current.components.filter((component) => component.id !== instanceId)
+      })
+    );
   }
 
   function updateComponentPin(instanceId: string, pinName: string, value: string) {
-    setProject((current) => ({
-      ...current,
-      components: current.components.map((component) =>
-        component.id === instanceId ? { ...component, pins: { ...component.pins, [pinName]: coercePinValue(value) } } : component
-      )
-    }));
+    setProject((current) =>
+      mergeProjectWiring({
+        ...current,
+        components: current.components.map((component) =>
+          component.id === instanceId ? { ...component, pins: { ...component.pins, [pinName]: coercePinValue(value) } } : component
+        )
+      })
+    );
   }
 
   function applyAutoPins() {
     const result = autoAssignProjectPins(project, selectedBoard, activeCatalog.components);
-    setProject(result.project);
+    setProject(mergeProjectWiring(result.project));
     const summary =
       result.changes.length > 0
         ? `Auto pins updated ${result.changes.length} connection${result.changes.length === 1 ? "" : "s"}.`
@@ -1414,7 +1618,7 @@ export default function App() {
             value={project.boardId}
             onChange={(event) => {
               const boardId = event.target.value;
-              setProject((current) => ({ ...current, boardId }));
+              setProject((current) => mergeProjectWiring({ ...current, boardId }));
               setSelectedFqbn(activeCatalog.boards.find((board) => board.id === boardId)?.fqbn ?? "");
             }}
           >
@@ -1486,7 +1690,7 @@ export default function App() {
               title={option.title}
             >
               {option.id === "code" ? <Code2 size={15} /> : <SquareStack size={15} />}
-              <span>{option.id === "icon" ? "Icon" : option.id === "blocks" ? "Blocks" : "Code"}</span>
+              <span>{option.id === "icon" ? "Icon Blocks" : option.id === "blocks" ? "Word Blocks" : "Arduino C++"}</span>
             </button>
           ))}
         </div>
@@ -1737,6 +1941,12 @@ export default function App() {
             <CircuitStudioPanel
               model={circuitStudio}
               generatedCode={generated.code}
+              runtimeSnapshot={runtimeSnapshot}
+              runtimeInputPins={runtimeInputPins}
+              onRunSimulation={runSimulation}
+              onStepSimulation={stepSimulation}
+              onResetSimulation={resetSimulation}
+              onSetInput={setRuntimeInput}
               onExportWokwiProject={() => void exportWokwiProject()}
               onOpenCode={() => {
                 setCodeView("cpp");

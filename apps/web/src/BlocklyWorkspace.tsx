@@ -124,7 +124,13 @@ function safeToolboxDefinition(): Blockly.utils.toolbox.ToolboxDefinition {
       contents: category.contents.filter((entry) => entry.kind !== "block" || Boolean(Blockly.Blocks[entry.type])
       )
     }))
-    .filter((category) => category.contents.length > 0);
+    .filter((category) => category.contents.length > 0)
+    .map((category) => ({
+      kind: "category",
+      name: category.name,
+      colour: category.colour,
+      contents: category.contents
+    }));
 
   return {
     kind: "categoryToolbox",
@@ -160,8 +166,13 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       if (blocksXml === lastWorkspaceXml.current) return;
       const nextProgram = workspaceToProgram(workspace, componentsRef.current);
       lastWorkspaceXml.current = blocksXml;
-      onChangeRef.current(nextProgram, blocksXml);
-      setWorkspaceError(null);
+      try {
+        onChangeRef.current(nextProgram, blocksXml);
+        setWorkspaceError(null);
+      } catch (error) {
+        console.error("Unable to sync blocks with project state.", error);
+        setWorkspaceError("Blockly sync was interrupted and this project edit is being preserved.");
+      }
     } catch (error) {
       console.error("Unable to sync workspace changes", error);
       setWorkspaceError("Blockly sync failed for this change. The workspace will keep running, but code generation may pause until recovered.");
@@ -187,8 +198,9 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     loadingRef.current = true;
     workspace.clear();
     lastWorkspaceXml.current = "";
-    syncProjectFromWorkspace(workspace);
     loadingRef.current = false;
+    syncProjectFromWorkspace(workspace);
+    setWorkspaceError(null);
   }, [syncProjectFromWorkspace]);
 
   useEffect(() => {
@@ -259,6 +271,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
         if (prepared.warnings.length > 0) {
           setWorkspaceError(prepared.warnings.join(" "));
         }
+        loadingRef.current = false;
         return;
       }
 
