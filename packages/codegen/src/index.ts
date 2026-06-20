@@ -180,6 +180,31 @@ function emitStep(step: ProgramStep, helpers: ReturnType<typeof componentLookup>
       const servo = helpers.getInstance(step.componentId);
       return [`${sanitizeIdentifier(servo?.id ?? "servo")}.write(${step.angle});`];
     }
+    case "dc-motor-write": {
+      const component = helpers.getInstance(step.componentId);
+      const in1 = pinLiteral(component?.pins.in1);
+      const in2 = pinLiteral(component?.pins.in2);
+      const enable = pinLiteral(component?.pins.enable);
+      const speed = step.direction === "stop" ? 0 : step.speed;
+      const in1Value = step.direction === "reverse" ? "LOW" : step.direction === "stop" ? "LOW" : "HIGH";
+      const in2Value = step.direction === "reverse" ? "HIGH" : "LOW";
+      return [
+        `digitalWrite(${in1}, ${in1Value});`,
+        `digitalWrite(${in2}, ${in2Value});`,
+        `analogWrite(${enable}, ${speed});`
+      ];
+    }
+    case "joystick-serial": {
+      const component = helpers.getInstance(step.componentId);
+      return [
+        `Serial.print("joystick_x: ");`,
+        `Serial.print(analogRead(${pinLiteral(component?.pins.x)}));`,
+        `Serial.print(" joystick_y: ");`,
+        `Serial.print(analogRead(${pinLiteral(component?.pins.y)}));`,
+        `Serial.print(" button: ");`,
+        `Serial.println(digitalRead(${pinLiteral(component?.pins.button)}));`
+      ];
+    }
     case "rgb-write": {
       const component = helpers.getInstance(step.componentId);
       return [
@@ -306,6 +331,7 @@ export function generateSketch(project: ProjectDocument, catalog: Catalog): Gene
       "read-digital-serial",
       "ultrasonic-serial",
       "dht-serial",
+      "joystick-serial",
       "ir-read-serial"
     ].includes(step.kind)
   );

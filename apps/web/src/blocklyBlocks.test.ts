@@ -20,4 +20,11 @@ describe("Blockly toolbox", () => {
       expect(category.cssConfig.icon).toContain("abl-toolbox-icon");
     }
   });
+
+  it("includes motion and joystick blocks for V1 catalog hardware", () => {
+    const allBlocks = toolbox.contents.flatMap((category) => category.contents.map((item) => item.type));
+
+    expect(allBlocks).toContain("abl_dc_motor_write");
+    expect(allBlocks).toContain("abl_joystick_serial");
+  });
 });

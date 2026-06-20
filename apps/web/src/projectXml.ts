@@ -49,6 +49,10 @@ function blockForStep(step: ProgramStep): string {
       return `<block type="abl_pot_servo">${field("POT", step.potentiometerId)}${field("SERVO", step.servoId)}</block>`;
     case "servo-write":
       return `<block type="abl_servo_write">${field("SERVO", step.componentId)}${field("ANGLE", step.angle)}</block>`;
+    case "dc-motor-write":
+      return `<block type="abl_dc_motor_write">${field("MOTOR", step.componentId)}${field("DIRECTION", step.direction)}${field("SPEED", step.speed)}</block>`;
+    case "joystick-serial":
+      return `<block type="abl_joystick_serial">${field("JOYSTICK", step.componentId)}</block>`;
     case "rgb-write":
       return `<block type="abl_rgb_color">${field("RGB", step.componentId)}${field("RED", step.red)}${field("GREEN", step.green)}${field("BLUE", step.blue)}</block>`;
     case "ultrasonic-serial":

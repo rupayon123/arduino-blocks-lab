@@ -134,6 +134,24 @@ function blockToSteps(block: Blockly.Block, components: ComponentInstance[]): Pr
       const componentId = value(block, "SERVO");
       return validComponent(componentId, components) ? [{ kind: "servo-write", componentId, angle: numberValue(block, "ANGLE", 90) }] : [];
     }
+    case "abl_dc_motor_write": {
+      const componentId = value(block, "MOTOR");
+      const direction = value(block, "DIRECTION");
+      return validComponent(componentId, components)
+        ? [
+            {
+              kind: "dc-motor-write",
+              componentId,
+              direction: direction === "reverse" || direction === "stop" ? direction : "forward",
+              speed: numberValue(block, "SPEED", 180)
+            }
+          ]
+        : [];
+    }
+    case "abl_joystick_serial": {
+      const componentId = value(block, "JOYSTICK");
+      return validComponent(componentId, components) ? [{ kind: "joystick-serial", componentId }] : [];
+    }
     case "abl_rgb_color": {
       const componentId = value(block, "RGB");
       return validComponent(componentId, components)

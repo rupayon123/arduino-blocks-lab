@@ -65,4 +65,17 @@ describe("projectToBlocklyXml", () => {
     expect(generated).toContain('<block type="abl_while_digital"');
     expect(generated).toContain('<statement name="BODY">');
   });
+
+  it("serializes motor and joystick blocks", () => {
+    const generated = projectToBlocklyXml(
+      project([
+        { kind: "dc-motor-write", componentId: "motor_1", direction: "forward", speed: 180 },
+        { kind: "joystick-serial", componentId: "joystick_1" }
+      ])
+    );
+
+    expect(generated).toContain('<block type="abl_dc_motor_write"');
+    expect(generated).toContain('<field name="DIRECTION">forward</field>');
+    expect(generated).toContain('<block type="abl_joystick_serial"');
+  });
 });

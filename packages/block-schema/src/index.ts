@@ -100,6 +100,8 @@ export type ProgramStep =
   | { kind: "button-controls-led"; buttonId: string; ledId: string }
   | { kind: "potentiometer-controls-servo"; potentiometerId: string; servoId: string }
   | { kind: "servo-write"; componentId: string; angle: number | string }
+  | { kind: "dc-motor-write"; componentId: string; direction: "forward" | "reverse" | "stop"; speed: number | string }
+  | { kind: "joystick-serial"; componentId: string }
   | { kind: "rgb-write"; componentId: string; red: number; green: number; blue: number }
   | { kind: "ultrasonic-serial"; componentId: string; label?: string }
   | { kind: "dht-serial"; componentId: string }

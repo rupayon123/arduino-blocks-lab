@@ -55,7 +55,9 @@ export function createIconBlockActions(project: ProjectDocument, definitions: Co
   const led = firstComponent(project, "led");
   const button = firstComponent(project, "button");
   const servo = firstComponent(project, "servo");
+  const motor = firstComponent(project, "dc-motor-driver");
   const potentiometer = firstComponent(project, "potentiometer");
+  const joystick = firstComponent(project, "joystick");
   const ultrasonic = firstComponent(project, "ultrasonic-hcsr04");
   const dht = project.components.find((component) => ["dht11", "dht22"].includes(component.componentId));
   const display = project.components.find((component) => ["lcd-1602-i2c", "oled-ssd1306"].includes(component.componentId));
@@ -120,6 +122,26 @@ export function createIconBlockActions(project: ProjectDocument, definitions: Co
       detail: servo.label,
       tone: "motion",
       step: { kind: "servo-write", componentId: servo.id, angle: 90 }
+    });
+  }
+
+  if (motor) {
+    actions.push({
+      id: "motor-forward",
+      title: "Motor forward",
+      detail: motor.label,
+      tone: "motion",
+      step: { kind: "dc-motor-write", componentId: motor.id, direction: "forward", speed: 180 }
+    });
+  }
+
+  if (joystick) {
+    actions.push({
+      id: "joystick",
+      title: "Joystick",
+      detail: joystick.label,
+      tone: "serial",
+      step: { kind: "joystick-serial", componentId: joystick.id }
     });
   }
 
@@ -248,6 +270,13 @@ export function createIconBlockCards(program: ProgramStep[], components: Compone
           detail: `${componentName(components, step.componentId)} to ${step.angle}`,
           tone: "motion"
         };
+      case "dc-motor-write":
+        return {
+          id: `${index}-${step.kind}`,
+          title: "Motor",
+          detail: `${componentName(components, step.componentId)} ${step.direction} ${step.speed}`,
+          tone: "motion"
+        };
       case "digital-toggle":
         return {
           id: `${index}-${step.kind}`,
@@ -285,6 +314,7 @@ export function createIconBlockCards(program: ProgramStep[], components: Compone
         };
       case "ultrasonic-serial":
       case "dht-serial":
+      case "joystick-serial":
       case "read-analog-serial":
       case "read-digital-serial":
       case "ir-read-serial":

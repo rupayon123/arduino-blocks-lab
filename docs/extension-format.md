@@ -56,7 +56,7 @@ https://github.com/rupayon123/arduino-blocks-lab/blob/main/examples/extensions/s
 
 GitHub `blob` links are converted to raw content URLs before fetching. Third-party hosts must allow browser CORS requests.
 
-V1 imported packs can reuse the built-in block operations such as analog serial, digital serial, relay write, tone, and display print. Fully custom Blockly block rendering is still a future extension-pack milestone.
+V1 imported packs can reuse built-in block operations such as analog serial, digital serial, joystick serial, motor drive, relay write, tone, and display print. Fully custom Blockly block rendering is still a future extension-pack milestone.
 
 ## Guided Lessons
 

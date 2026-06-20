@@ -100,7 +100,8 @@ export const toolbox: StyledToolbox = {
       cssConfig: categoryCss("motion"),
       contents: [
         { kind: "block", type: "abl_servo_write" },
-        { kind: "block", type: "abl_pot_servo" }
+        { kind: "block", type: "abl_pot_servo" },
+        { kind: "block", type: "abl_dc_motor_write" }
       ]
     },
     {
@@ -134,6 +135,7 @@ export const toolbox: StyledToolbox = {
         { kind: "block", type: "abl_digital_serial" },
         { kind: "block", type: "abl_ultrasonic_serial" },
         { kind: "block", type: "abl_dht_serial" },
+        { kind: "block", type: "abl_joystick_serial" },
         { kind: "block", type: "abl_ir_serial" }
       ]
     }
@@ -535,6 +537,28 @@ export function registerArduinoBlocks() {
         .appendField("angle")
         .appendField(numberField(90, 0, 180), "ANGLE");
       statement(this, blockColours.motion);
+    }
+  };
+
+  Blockly.Blocks.abl_dc_motor_write = {
+    init() {
+      this.appendDummyInput()
+        .appendField("set")
+        .appendField(new Blockly.FieldDropdown(() => componentOptions(["dc-motor-driver"])), "MOTOR")
+        .appendField("motor")
+        .appendField(new Blockly.FieldDropdown([["forward", "forward"], ["reverse", "reverse"], ["stop", "stop"]]), "DIRECTION")
+        .appendField("speed")
+        .appendField(numberField(180, 0, 255), "SPEED");
+      statement(this, blockColours.motion);
+    }
+  };
+
+  Blockly.Blocks.abl_joystick_serial = {
+    init() {
+      this.appendDummyInput()
+        .appendField("print joystick")
+        .appendField(new Blockly.FieldDropdown(() => componentOptions(["joystick"])), "JOYSTICK");
+      statement(this, blockColours.serial);
     }
   };
 

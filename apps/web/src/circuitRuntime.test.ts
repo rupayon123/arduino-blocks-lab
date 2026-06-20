@@ -160,4 +160,56 @@ describe("circuit runtime", () => {
     expect(snapshot.warnings).toEqual(expect.arrayContaining(["while-pin reached safety limit and was stopped."]));
     expect(snapshot.pinValues["13"]).toBe("HIGH");
   });
+
+  it("simulates DC motor direction and speed", () => {
+    const project: ProjectDocument = {
+      schemaVersion: "1.0.0",
+      name: "Motor",
+      boardId: "arduino-uno",
+      components: [
+        {
+          id: "motor_1",
+          componentId: "dc-motor-driver",
+          label: "Motor",
+          pins: { in1: 5, in2: 6, enable: 3 }
+        }
+      ],
+      program: [{ kind: "dc-motor-write", componentId: "motor_1", direction: "reverse", speed: 210 }]
+    };
+
+    const runtime = createRuntimeFromProject(project);
+    const snapshot = runtime.step();
+
+    expect(snapshot.pinValues["5"]).toBe("LOW");
+    expect(snapshot.pinValues["6"]).toBe("HIGH");
+    expect(snapshot.pinValues["3"]).toBe(210);
+    expect(snapshot.componentState.motor_1).toMatchObject({ DIRECTION: "reverse", SPEED: 210 });
+    expect(snapshot.serialLog.join("\n")).toContain("motor_1: reverse 210");
+  });
+
+  it("simulates joystick serial readings from virtual pin inputs", () => {
+    const project: ProjectDocument = {
+      schemaVersion: "1.0.0",
+      name: "Joystick",
+      boardId: "arduino-uno",
+      components: [
+        {
+          id: "joystick_1",
+          componentId: "joystick",
+          label: "Joystick",
+          pins: { x: "A2", y: "A3", button: 12 }
+        }
+      ],
+      program: [{ kind: "joystick-serial", componentId: "joystick_1" }]
+    };
+
+    const runtime = createRuntimeFromProject(project);
+    runtime.setInput("A2", 800);
+    runtime.setInput("A3", 250);
+    runtime.setInput("12", "LOW");
+    const snapshot = runtime.step();
+
+    expect(snapshot.componentState.joystick_1).toMatchObject({ X: 800, Y: 250, BUTTON: "LOW" });
+    expect(snapshot.serialLog.join("\n")).toContain("joystick_1: x 800 y 250 button LOW");
+  });
 });

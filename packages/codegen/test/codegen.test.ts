@@ -97,6 +97,16 @@ describe("generateSketch", () => {
         expected: "int servoAngle = map(knobValue, 0, 1023, 0, 180)"
       },
       { components: ["servo"], step: ({ servo }) => ({ kind: "servo-write", componentId: servo!.id, angle: 90 }), expected: ".write(90)" },
+      {
+        components: ["dc-motor-driver"],
+        step: ({ "dc-motor-driver": motor }) => ({ kind: "dc-motor-write", componentId: motor!.id, direction: "forward", speed: 180 }),
+        expected: "analogWrite(3, 180)"
+      },
+      {
+        components: ["joystick"],
+        step: ({ joystick }) => ({ kind: "joystick-serial", componentId: joystick!.id }),
+        expected: "joystick_x: "
+      },
       { components: ["rgb-led"], step: ({ "rgb-led": rgb }) => ({ kind: "rgb-write", componentId: rgb!.id, red: 1, green: 2, blue: 3 }), expected: "analogWrite(9, 1)" },
       {
         components: ["ultrasonic-hcsr04"],

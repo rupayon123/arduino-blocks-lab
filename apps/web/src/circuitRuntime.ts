@@ -690,6 +690,43 @@ export function createCircuitRuntime(config: RuntimeConfig): CircuitRuntimeContr
         break;
       }
 
+      case "dc-motor-write": {
+        const in1 = findTargetPin(step.componentId, ["IN1"]);
+        const in2 = findTargetPin(step.componentId, ["IN2"]);
+        const enable = findTargetPin(step.componentId, ["ENABLE", "PWM"]);
+        const speed = step.direction === "stop" ? 0 : clamp(asNumber(step.speed), 0, 255);
+        const in1Value: PinValue = step.direction === "forward" ? "HIGH" : "LOW";
+        const in2Value: PinValue = step.direction === "reverse" ? "HIGH" : "LOW";
+
+        if (!in1 || !in2 || !enable) {
+          warn("dc-motor-write missing motor driver pin mapping.");
+          return;
+        }
+
+        setPinValue(in1, in1Value);
+        setPinValue(in2, in2Value);
+        setPinValue(enable, speed);
+        setComponentStateValue(step.componentId, "direction", step.direction);
+        setComponentStateValue(step.componentId, "speed", speed);
+        appendSerialLine(`${step.componentId}: ${step.direction} ${speed}`);
+        break;
+      }
+
+      case "joystick-serial": {
+        const xPin = findInputTargetPin(step.componentId, ["X"]);
+        const yPin = findInputTargetPin(step.componentId, ["Y"]);
+        const buttonPin = findInputTargetPin(step.componentId, ["BUTTON", "SW"]);
+        const x = clamp(asNumber(xPin ? getPinValue(xPin) : getComponentPinValue(step.componentId, "x", 512)), 0, 1023);
+        const y = clamp(asNumber(yPin ? getPinValue(yPin) : getComponentPinValue(step.componentId, "y", 512)), 0, 1023);
+        const button = asLogicState(buttonPin ? getPinValue(buttonPin) : getComponentPinValue(step.componentId, "button", "HIGH"));
+
+        setComponentStateValue(step.componentId, "x", x);
+        setComponentStateValue(step.componentId, "y", y);
+        setComponentStateValue(step.componentId, "button", button);
+        appendSerialLine(`${step.componentId}: x ${Math.round(x)} y ${Math.round(y)} button ${button}`);
+        break;
+      }
+
       case "rgb-write": {
         const pin = findTargetPin(step.componentId, ["RGB", "SIGNAL", "PIN"]);
         const red = clamp(asNumber(step.red), 0, 255);

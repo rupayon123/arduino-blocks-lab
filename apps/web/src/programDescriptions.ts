@@ -32,6 +32,10 @@ export function describeProgramStep(step: ProgramStep): string {
       return "map knob value to servo angle";
     case "servo-write":
       return `set servo angle to ${step.angle}`;
+    case "dc-motor-write":
+      return `set motor ${step.direction} at speed ${step.speed}`;
+    case "joystick-serial":
+      return "read joystick and print X, Y, and button";
     case "rgb-write":
       return `set RGB color to ${step.red}, ${step.green}, ${step.blue}`;
     case "ultrasonic-serial":

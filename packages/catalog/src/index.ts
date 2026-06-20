@@ -376,6 +376,8 @@ export const blocks: BlockDefinition[] = [
   { id: "button-controls-led", label: "button controls LED", category: "logic", kind: "button-controls-led", inputs: [], description: "Use a button to switch an LED." },
   { id: "potentiometer-controls-servo", label: "knob controls servo", category: "motion", kind: "potentiometer-controls-servo", inputs: [], description: "Map a knob to a servo angle." },
   { id: "servo-write", label: "servo angle", category: "motion", kind: "servo-write", inputs: [], description: "Move a servo to an angle." },
+  { id: "dc-motor-write", label: "DC motor speed", category: "motion", kind: "dc-motor-write", inputs: [], description: "Drive a motor forward, reverse, or stop with PWM speed." },
+  { id: "joystick-serial", label: "print joystick", category: "input", kind: "joystick-serial", inputs: [], description: "Print joystick X, Y, and button readings." },
   { id: "rgb-write", label: "RGB color", category: "output", kind: "rgb-write", inputs: [], description: "Set an RGB LED color." },
   { id: "ultrasonic-serial", label: "print distance", category: "input", kind: "ultrasonic-serial", inputs: [], description: "Measure distance and print it." },
   { id: "dht-serial", label: "print temperature", category: "input", kind: "dht-serial", inputs: [], description: "Read temperature and humidity." },
