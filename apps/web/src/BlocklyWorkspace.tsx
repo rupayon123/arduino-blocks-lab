@@ -50,6 +50,7 @@ const darkBlocklyTheme = Blockly.Theme.defineTheme("ablDark", {
 });
 
 const emptyBlocklyXml = "<xml xmlns=\"https://developers.google.com/blockly/xml\"/>";
+const visibleStackPosition = { x: "540", y: "56" };
 
 function getKnownBlockTypes() {
   return new Set(
@@ -61,6 +62,22 @@ function getKnownBlockTypes() {
       .filter((entry) => typeof entry.spec?.init === "function")
       .map((entry) => entry.type)
   );
+}
+
+function ensureVisibleTopBlock(dom: Element) {
+  const topBlock = Array.from(dom.children).find((node) => node.tagName.toLowerCase() === "block");
+  if (!topBlock) return false;
+
+  let updated = false;
+  if (!topBlock.hasAttribute("x")) {
+    topBlock.setAttribute("x", visibleStackPosition.x);
+    updated = true;
+  }
+  if (!topBlock.hasAttribute("y")) {
+    topBlock.setAttribute("y", visibleStackPosition.y);
+    updated = true;
+  }
+  return updated;
 }
 
 function sanitizeBlocklyXml(rawXml: string) {
@@ -92,6 +109,7 @@ function sanitizeBlocklyXml(rawXml: string) {
   }
 
   let removed = 0;
+  ensureVisibleTopBlock(dom);
   for (const block of blockNodes) {
     const type = block.getAttribute("type");
     if (!type || knownBlockTypes.has(type)) continue;
@@ -106,6 +124,7 @@ function sanitizeBlocklyXml(rawXml: string) {
 
     block.remove();
   }
+  ensureVisibleTopBlock(dom);
 
   return {
     xml: Blockly.Xml.domToText(dom),
@@ -156,6 +175,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
   const loadingRef = useRef(false);
   const syncFrameRef = useRef<number | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
   const onChangeRef = useRef(onChange);
   const lastWorkspaceXml = useRef<string>("");
   const lastLoadedXml = useRef<string>("");
@@ -179,6 +199,10 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       if (syncFrameRef.current !== null) {
         window.cancelAnimationFrame(syncFrameRef.current);
         syncFrameRef.current = null;
+      }
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
       }
     };
   }, []);
@@ -242,6 +266,37 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
     }
   }, []);
 
+  const scheduleWorkspaceResize = useCallback(
+    (workspace: Blockly.WorkspaceSvg) => {
+      if (!mountedRef.current) return;
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
+      resizeFrameRef.current = window.requestAnimationFrame(() => {
+        resizeFrameRef.current = null;
+        if (!mountedRef.current || workspaceRef.current !== workspace) return;
+        syncWorkspaceRender(workspace);
+      });
+    },
+    [syncWorkspaceRender]
+  );
+
+  const focusLoadedStack = useCallback(
+    (workspace: Blockly.WorkspaceSvg) => {
+      const firstBlock = workspace.getTopBlocks(false)[0];
+      if (!firstBlock) return;
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (!mountedRef.current || workspaceRef.current !== workspace) return;
+          syncWorkspaceRender(workspace);
+          workspace.centerOnBlock(firstBlock.id, true);
+        });
+      });
+    },
+    [syncWorkspaceRender]
+  );
+
   useEffect(() => {
     setBlocklyComponentProvider(() => componentsRef.current);
     setBlocklyComponentDefinitionProvider(() => componentDefinitionsRef.current);
@@ -250,6 +305,9 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       workspaceRef.current.dispose();
       workspaceRef.current = null;
     }
+    lastWorkspaceXml.current = "";
+    lastLoadedXml.current = "";
+    lastReloadKey.current = "";
 
     if (!containerRef.current) return;
     const compactWorkspace = window.matchMedia("(max-width: 620px)").matches;
@@ -280,17 +338,38 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
         if (loadingRef.current || event.isUiEvent) return;
         scheduleSync(workspace);
       };
-      const resizeListener = () => syncWorkspaceRender(workspace);
+      const resizeListener = () => scheduleWorkspaceResize(workspace);
+      const resizeObserver =
+        typeof ResizeObserver === "undefined"
+          ? null
+          : new ResizeObserver(() => {
+              scheduleWorkspaceResize(workspace);
+            });
       workspace.addChangeListener(listener);
       window.addEventListener("resize", resizeListener);
+      if (resizeObserver && containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+        if (containerRef.current.parentElement) {
+          resizeObserver.observe(containerRef.current.parentElement);
+        }
+      }
       syncWorkspaceRender(workspace);
+      scheduleWorkspaceResize(workspace);
       setWorkspaceError(null);
 
       return () => {
         workspace.removeChangeListener(listener);
         window.removeEventListener("resize", resizeListener);
+        resizeObserver?.disconnect();
+        if (resizeFrameRef.current !== null) {
+          window.cancelAnimationFrame(resizeFrameRef.current);
+          resizeFrameRef.current = null;
+        }
         workspace.dispose();
         workspaceRef.current = null;
+        lastWorkspaceXml.current = "";
+        lastLoadedXml.current = "";
+        lastReloadKey.current = "";
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create Blockly workspace.";
@@ -298,7 +377,7 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       console.error("Unable to initialize Blockly", error);
       workspaceRef.current = null;
     }
-  }, [themePreference, scheduleSync, syncWorkspaceRender]);
+  }, [themePreference, scheduleSync, scheduleWorkspaceResize, syncWorkspaceRender]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
@@ -318,17 +397,16 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
         if (prepared.warnings.length > 0) {
           setWorkspaceError(prepared.warnings.join(" "));
         }
-        syncWorkspaceRender(workspace);
+        scheduleWorkspaceResize(workspace);
         loadingRef.current = false;
         return;
       }
 
       const dom = Blockly.utils.xml.textToDom(prepared.xml);
-      workspace.clear();
       lastWorkspaceXml.current = "";
       lastLoadedXml.current = prepared.xml;
       lastReloadKey.current = reloadKey;
-      Blockly.Xml.domToWorkspace(dom, workspace);
+      Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, workspace);
       syncProjectFromWorkspace(workspace);
       if (prepared.warnings.length > 0) {
         setWorkspaceError(prepared.warnings.join(" "));
@@ -337,6 +415,8 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       }
       workspace.refreshToolboxSelection();
       syncWorkspaceRender(workspace);
+      scheduleWorkspaceResize(workspace);
+      focusLoadedStack(workspace);
     } catch (error) {
       if (!mountedRef.current) return;
       console.error("Failed to load Blockly XML. Falling back to empty canvas.", error);
@@ -345,19 +425,20 @@ export default function BlocklyWorkspace({ components, componentDefinitions, xml
       lastReloadKey.current = reloadKey;
       syncProjectFromWorkspace(workspace);
       syncWorkspaceRender(workspace);
+      scheduleWorkspaceResize(workspace);
       setWorkspaceError("Loaded an older/invalid blocks XML. Your project was restored as an empty canvas.");
     } finally {
       loadingRef.current = false;
     }
-  }, [reloadKey, xml, syncProjectFromWorkspace, syncWorkspaceRender]);
+  }, [focusLoadedStack, reloadKey, scheduleWorkspaceResize, syncProjectFromWorkspace, syncWorkspaceRender, xml]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
     if (!mountedRef.current) return;
     workspace?.setTheme(blocklyThemeFor(themePreference));
     workspace?.refreshToolboxSelection();
-    if (workspace) syncWorkspaceRender(workspace);
-  }, [themePreference, syncWorkspaceRender]);
+    if (workspace) scheduleWorkspaceResize(workspace);
+  }, [themePreference, scheduleWorkspaceResize]);
 
   useEffect(() => {
     setBlocklyComponentProvider(() => componentsRef.current);

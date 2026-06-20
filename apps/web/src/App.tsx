@@ -336,6 +336,7 @@ function boardInputsFromConnections(project: ProjectDocument, components: Compon
   return base
     .map((assignment) => ({
       pin: normalizeBoardPin(assignment.boardPin),
+      componentId: assignment.componentId,
       componentLabel: componentNames.get(assignment.componentId) ?? assignment.componentId,
       pinName: assignment.pin
     }))

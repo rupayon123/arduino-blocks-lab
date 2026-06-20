@@ -64,6 +64,8 @@ export type CircuitStudioBenchSimulationKind =
   | "neopixel"
   | "tone"
   | "relay"
+  | "dc-motor"
+  | "joystick"
   | "ir-serial";
 
 export type CircuitStudioBenchControl =
@@ -378,6 +380,20 @@ function eventFromStep(step: ProgramStep, index: number, project: ProjectDocumen
         detail: `${componentLabel(project, step.potentiometerId)} maps 0-1023 into a servo angle for ${componentLabel(project, step.servoId)}.`,
         tone: "motion"
       };
+    case "dc-motor-write":
+      return {
+        id,
+        title: `Motor ${step.direction}`,
+        detail: `${componentLabel(project, step.componentId)} sets direction to ${step.direction} at PWM ${step.direction === "stop" ? 0 : step.speed}.`,
+        tone: "motion"
+      };
+    case "joystick-serial":
+      return {
+        id,
+        title: "Joystick reading",
+        detail: `${componentLabel(project, step.componentId)} prints X, Y, and button state to serial.`,
+        tone: "serial"
+      };
     case "servo-write":
       return {
         id,
@@ -580,6 +596,27 @@ export function simulateBenchReadings(test: CircuitStudioBenchTest, values: Reco
       const state = controlBoolean(values, "state", Boolean(simulation.metadata.defaultState));
       return [reading("relay", metadataText(simulation, "componentLabel", "Relay"), state ? "closed / energized" : "open / relaxed", "output")];
     }
+    case "dc-motor": {
+      const direction = controlString(values, "direction", metadataText(simulation, "direction", "forward"));
+      const speed = direction === "stop" ? 0 : Math.round(clamp(controlNumber(values, "speed", metadataNumber(simulation, "speed", 180)), 0, 255));
+      const percent = Math.round((speed / 255) * 100);
+      return [
+        reading("direction", metadataText(simulation, "componentLabel", "Motor"), direction, "motion"),
+        reading("speed", "Motor speed", `${speed} PWM / ${percent}%`, "motion")
+      ];
+    }
+    case "joystick": {
+      const x = Math.round(clamp(controlNumber(values, "x", 512), 0, 1023));
+      const y = Math.round(clamp(controlNumber(values, "y", 512), 0, 1023));
+      const pressed = controlBoolean(values, "pressed", false);
+      const leftRight = x < 420 ? "left" : x > 600 ? "right" : "center";
+      const upDown = y < 420 ? "down" : y > 600 ? "up" : "center";
+      return [
+        reading("x", "X axis", `${x} (${leftRight})`, "input"),
+        reading("y", "Y axis", `${y} (${upDown})`, "input"),
+        reading("button", "Button", pressed ? "LOW pressed" : "HIGH released", "serial")
+      ];
+    }
     case "ir-serial": {
       const code = controlString(values, "code", "0xFFA25D");
       return [reading("serial", "Serial Monitor", `IR code: ${code}`, "serial")];
@@ -689,6 +726,38 @@ function simulationFromStep(step: ProgramStep, project: ProjectDocument): Circui
         metadata: { componentLabel: componentLabel(project, step.componentId), angle }
       };
     }
+    case "dc-motor-write": {
+      const direction = step.direction;
+      const speed = direction === "stop" ? 0 : clamp(Math.round(numericValue(step.speed, 180)), 0, 255);
+      return {
+        kind: "dc-motor",
+        controls: [
+          {
+            id: "direction",
+            label: "Direction",
+            kind: "choice",
+            defaultValue: direction,
+            options: [
+              { value: "forward", label: "Forward" },
+              { value: "reverse", label: "Reverse" },
+              { value: "stop", label: "Stop" }
+            ]
+          },
+          { id: "speed", label: "Speed", kind: "range", min: 0, max: 255, step: 1, defaultValue: speed, lowLabel: "stopped", highLabel: "full" }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId), direction, speed }
+      };
+    }
+    case "joystick-serial":
+      return {
+        kind: "joystick",
+        controls: [
+          { id: "x", label: "X axis", kind: "range", min: 0, max: 1023, step: 1, defaultValue: 512, lowLabel: "left", highLabel: "right" },
+          { id: "y", label: "Y axis", kind: "range", min: 0, max: 1023, step: 1, defaultValue: 512, lowLabel: "down", highLabel: "up" },
+          { id: "pressed", label: "Button", kind: "toggle", defaultValue: false, offLabel: "Released", onLabel: "Pressed" }
+        ],
+        metadata: { componentLabel: componentLabel(project, step.componentId) }
+      };
     case "rgb-write":
       return {
         kind: "rgb-output",
@@ -879,6 +948,22 @@ function benchTestFromStep(step: ProgramStep, index: number, project: ProjectDoc
         setup: `Set the bench servo angle to ${step.angle}.`,
         expected: `${componentLabel(project, step.componentId)} should rotate to the requested position without jitter.`,
         tone: "motion"
+      });
+    case "dc-motor-write":
+      return create({
+        id,
+        title: `Spin ${componentLabel(project, step.componentId)}`,
+        setup: "Try forward, reverse, and stop while sweeping PWM speed.",
+        expected: `${componentLabel(project, step.componentId)} should change direction and slow down or speed up with PWM.`,
+        tone: "motion"
+      });
+    case "joystick-serial":
+      return create({
+        id,
+        title: `Move ${componentLabel(project, step.componentId)}`,
+        setup: "Drag X/Y and press the joystick button in the virtual bench.",
+        expected: `${componentLabel(project, step.componentId)} should print matching X, Y, and button values.`,
+        tone: "serial"
       });
     case "rgb-write":
       return create({

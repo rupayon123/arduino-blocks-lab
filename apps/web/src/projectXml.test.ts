@@ -23,7 +23,8 @@ describe("projectToBlocklyXml", () => {
         { kind: "if-pin", pin: 2, expectedValue: "HIGH", then: [{ kind: "digital-write", pin: 13, value: "HIGH" }] }
       ])
     );
-    expect(generated).toContain('<block type="abl_if_digital"');
+    expect(generated).toContain('type="abl_if_digital"');
+    expect(generated).toContain('<block x="540" y="56" type="abl_if_digital"');
     expect(generated).toContain('<statement name="DO"><block type="abl_digital_write_pin"');
   });
 
@@ -40,7 +41,7 @@ describe("projectToBlocklyXml", () => {
         }
       ])
     );
-    expect(generated).toContain('<block type="abl_repeat"');
+    expect(generated).toContain('type="abl_repeat"');
     expect(generated).toContain('<statement name="DO">');
     expect(generated).toContain('<block type="abl_delay"');
   });
@@ -58,7 +59,7 @@ describe("projectToBlocklyXml", () => {
         { kind: "while-pin", pin: 3, expectedValue: "HIGH", body: [{ kind: "delay", ms: 20 }] }
       ])
     );
-    expect(generated).toContain('<block type="abl_if_else_digital"');
+    expect(generated).toContain('type="abl_if_else_digital"');
     expect(generated).toContain('<statement name="DO">');
     expect(generated).toContain('<statement name="ELSE">');
     expect(generated).toContain('<block type="abl_digital_write_pin"');
@@ -74,7 +75,7 @@ describe("projectToBlocklyXml", () => {
       ])
     );
 
-    expect(generated).toContain('<block type="abl_dc_motor_write"');
+    expect(generated).toContain('type="abl_dc_motor_write"');
     expect(generated).toContain('<field name="DIRECTION">forward</field>');
     expect(generated).toContain('<block type="abl_joystick_serial"');
   });

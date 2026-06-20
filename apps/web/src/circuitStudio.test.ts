@@ -112,6 +112,54 @@ describe("circuit studio model", () => {
     );
   });
 
+  it("adds guided bench tests for motor and joystick blocks", () => {
+    const model = studioFor({
+      schemaVersion: "1.0.0",
+      boardId: "arduino-uno",
+      name: "Motor Joystick Lab",
+      components: [
+        {
+          id: "motor_1",
+          componentId: "dc-motor-driver",
+          label: "Drive Motor",
+          pins: { in1: 5, in2: 6, enable: 3 }
+        },
+        {
+          id: "joystick_1",
+          componentId: "joystick",
+          label: "Drive Stick",
+          pins: { x: "A2", y: "A3", button: 12 }
+        }
+      ],
+      program: [
+        { kind: "dc-motor-write", componentId: "motor_1", direction: "reverse", speed: 210 },
+        { kind: "joystick-serial", componentId: "joystick_1" }
+      ]
+    });
+    const motorTest = model.benchTests.find((candidate) => candidate.simulation.kind === "dc-motor");
+    const joystickTest = model.benchTests.find((candidate) => candidate.simulation.kind === "joystick");
+
+    expect(model.events.map((event) => event.title)).toEqual(expect.arrayContaining(["Motor reverse", "Joystick reading"]));
+    expect(motorTest).toMatchObject({
+      title: "Spin Drive Motor",
+      tone: "motion"
+    });
+    expect(joystickTest).toMatchObject({
+      title: "Move Drive Stick",
+      tone: "serial"
+    });
+    expect(simulateBenchReadings(motorTest!, { ...defaultBenchControlValues(motorTest!), direction: "stop", speed: 210 })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Motor speed", value: "0 PWM / 0%" })])
+    );
+    expect(simulateBenchReadings(joystickTest!, { ...defaultBenchControlValues(joystickTest!), x: 900, y: 100, pressed: true })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "X axis", value: "900 (right)" }),
+        expect.objectContaining({ label: "Y axis", value: "100 (down)" }),
+        expect.objectContaining({ label: "Button", value: "LOW pressed" })
+      ])
+    );
+  });
+
   it("marks a fully supported starter project ready for simulation", () => {
     const model = studioFor(starterProjects.blink);
 

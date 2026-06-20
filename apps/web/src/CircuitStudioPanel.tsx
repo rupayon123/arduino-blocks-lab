@@ -36,6 +36,7 @@ import type { WiringCanvasConnection, WiringCanvasModel } from "./wiringCanvas";
 
 type RuntimeBoardInput = {
   pin: string;
+  componentId: string;
   componentLabel: string;
   pinName: string;
 };
@@ -153,6 +154,43 @@ function clampNumeric(value: unknown, fallback: number, max = 1023) {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(0, Math.min(max, Math.round(parsed)));
+}
+
+function joystickPinRole(pinName: string) {
+  const normalized = pinName.toLowerCase().trim();
+  if (normalized === "x" || normalized.includes("x axis")) return "x";
+  if (normalized === "y" || normalized.includes("y axis")) return "y";
+  if (normalized === "button" || normalized === "sw" || normalized.includes("switch")) return "button";
+  return undefined;
+}
+
+type JoystickInputGroup = {
+  componentId: string;
+  componentLabel: string;
+  x?: RuntimeBoardInput;
+  y?: RuntimeBoardInput;
+  button?: RuntimeBoardInput;
+};
+
+function groupJoystickInputs(entries: RuntimeBoardInput[]) {
+  const groups = new Map<string, JoystickInputGroup>();
+  entries.forEach((entry) => {
+    const role = joystickPinRole(entry.pinName);
+    if (!role) return;
+    const group = groups.get(entry.componentId) ?? { componentId: entry.componentId, componentLabel: entry.componentLabel };
+    group[role] = entry;
+    groups.set(entry.componentId, group);
+  });
+
+  return Array.from(groups.values()).filter((group) => group.x || group.y || group.button);
+}
+
+function pullupButtonPressed(value: PinValue | undefined) {
+  if (value === undefined) return false;
+  if (typeof value === "boolean") return !value;
+  if (typeof value === "number") return value === 0;
+  const normalized = String(value).toLowerCase().trim();
+  return normalized === "0" || normalized === "low" || normalized === "false" || normalized === "pressed";
 }
 
 function BenchControl({
@@ -280,6 +318,76 @@ function BoardInputControl({
   );
 }
 
+function JoystickInputPad({
+  group,
+  values,
+  onChange
+}: {
+  group: JoystickInputGroup;
+  values: Record<string, PinValue>;
+  onChange: (pin: string, value: PinValue) => void;
+}) {
+  const xValue = group.x ? clampNumeric(values[group.x.pin], 512) : 512;
+  const yValue = group.y ? clampNumeric(values[group.y.pin], 512) : 512;
+  const pressed = pullupButtonPressed(group.button ? values[group.button.pin] : undefined);
+
+  return (
+    <div className="joystick-input-card">
+      <div className="joystick-input-head">
+        <strong>{group.componentLabel}</strong>
+        <span>Virtual joystick</span>
+      </div>
+      <div className="joystick-input-grid">
+        {group.x ? (
+          <label className="joystick-input-axis">
+            <span>
+              X axis
+              <output>{xValue}</output>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1023}
+              step={1}
+              value={xValue}
+              onInput={(event) => onChange(group.x!.pin, Number(event.currentTarget.value))}
+              onChange={(event) => onChange(group.x!.pin, Number(event.currentTarget.value))}
+            />
+          </label>
+        ) : null}
+        {group.y ? (
+          <label className="joystick-input-axis">
+            <span>
+              Y axis
+              <output>{yValue}</output>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1023}
+              step={1}
+              value={yValue}
+              onInput={(event) => onChange(group.y!.pin, Number(event.currentTarget.value))}
+              onChange={(event) => onChange(group.y!.pin, Number(event.currentTarget.value))}
+            />
+          </label>
+        ) : null}
+        {group.button ? (
+          <button
+            className={`joystick-input-button ${pressed ? "active" : ""}`}
+            type="button"
+            aria-pressed={pressed}
+            onClick={() => onChange(group.button!.pin, pressed ? "HIGH" : "LOW")}
+          >
+            <span>Button</span>
+            <strong>{pressed ? "Pressed" : "Released"}</strong>
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function CircuitStudioPanel({
   model,
   generatedCode,
@@ -310,6 +418,11 @@ export default function CircuitStudioPanel({
   const runtimeComponents = runtimeSnapshot?.componentState ?? {};
   const runtimeStatus = runtimeSnapshot?.running ? "Running" : runtimeSnapshot?.halted === "blocked" ? "Blocked" : runtimeSnapshot?.halted === "done" ? "Done" : "Ready";
   const runBlocked = runtimeSnapshot?.halted === "blocked";
+  const joystickInputGroups = groupJoystickInputs(boardInputPins);
+  const groupedInputPins = new Set(
+    joystickInputGroups.flatMap((group) => [group.x?.pin, group.y?.pin, group.button?.pin].filter((pin): pin is string => Boolean(pin)))
+  );
+  const standaloneInputPins = boardInputPins.filter((entry) => !groupedInputPins.has(entry.pin));
   const readyLabel =
     model.stats.errors > 0 ? `${model.stats.errors} fix${model.stats.errors === 1 ? "" : "es"}` : model.stats.warnings > 0 ? `${model.stats.warnings} review` : "Ready";
 
@@ -527,7 +640,10 @@ export default function CircuitStudioPanel({
             )}
             {boardInputPins.length > 0 ? (
               <div className="board-input-grid">
-                {boardInputPins.map((entry) => (
+                {joystickInputGroups.map((group) => (
+                  <JoystickInputPad key={group.componentId} group={group} values={runtimePins} onChange={(pin, value) => onSetInput?.(pin, value)} />
+                ))}
+                {standaloneInputPins.map((entry) => (
                   <BoardInputControl
                     key={entry.pin}
                     pin={entry.pin}

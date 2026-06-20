@@ -98,6 +98,11 @@ function chain(blocks: string[]): string {
   return first.replace("</block>", `<next>${chain(rest)}</next></block>`);
 }
 
+function placeFirstStack(xml: string) {
+  return xml.replace("<block ", '<block x="540" y="56" ');
+}
+
 export function projectToBlocklyXml(project: ProjectDocument): string {
-  return `<xml xmlns="https://developers.google.com/blockly/xml">${chain(project.program.map(blockForStep))}</xml>`;
+  const blockChain = chain(project.program.map(blockForStep));
+  return `<xml xmlns="https://developers.google.com/blockly/xml">${blockChain ? placeFirstStack(blockChain) : ""}</xml>`;
 }

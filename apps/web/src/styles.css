@@ -996,14 +996,17 @@ button:disabled {
 
 .workspace-grid {
   min-height: 0;
+  height: calc(100dvh - 118px);
+  max-height: calc(100dvh - 118px);
   width: 100%;
   flex: 1 1 auto;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(290px, 330px);
   gap: 14px;
   padding: 14px;
-  align-items: start;
-  overflow: auto;
+  align-items: stretch;
+  overflow: hidden;
   overscroll-behavior: contain;
 }
 
@@ -1818,6 +1821,7 @@ button:disabled {
 .main-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3178,6 +3182,89 @@ html[data-theme="dark"] .breadboard-model {
 
 .board-input-pin input[type="range"] {
   width: 100%;
+}
+
+.joystick-input-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--blue) 24%, var(--line));
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--blue) 9%, transparent), transparent 58%),
+    var(--paper);
+}
+
+.joystick-input-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.joystick-input-head strong {
+  color: var(--heading);
+  font-size: 12px;
+}
+
+.joystick-input-head span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.joystick-input-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.joystick-input-axis {
+  display: grid;
+  gap: 5px;
+}
+
+.joystick-input-axis span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.joystick-input-axis output {
+  color: var(--deep-blue);
+  font-size: 11px;
+}
+
+.joystick-input-axis input[type="range"] {
+  width: 100%;
+}
+
+.joystick-input-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--muted);
+  padding: 7px 9px;
+}
+
+.joystick-input-button strong {
+  color: var(--heading);
+  font-size: 11px;
+}
+
+.joystick-input-button.active {
+  border-color: color-mix(in srgb, var(--green) 48%, var(--line));
+  background: color-mix(in srgb, var(--green) 12%, var(--field));
+  color: var(--green);
 }
 
 .circuit-transcript {
@@ -6106,7 +6193,16 @@ html[data-theme="dark"] .breadboard-model {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    height: auto;
+    height: min(760px, calc(100dvh - 148px));
+    min-height: 520px;
+  }
+
+  .block-studio {
+    min-height: 520px;
+  }
+
+  .block-studio-canvas {
+    min-height: 430px;
   }
 
   .left-panel,
