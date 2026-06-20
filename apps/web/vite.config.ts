@@ -5,6 +5,7 @@ import { fileURLToPath, URL } from "node:url";
 const r = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
+  cacheDir: process.env.VITE_CACHE_DIR ?? "/tmp/arduino-blocks-lab-vite",
   plugins: [react()],
   base: process.env.GITHUB_PAGES === "true" ? "/arduino-blocks-lab/" : "/",
   resolve: {

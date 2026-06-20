@@ -13,9 +13,6 @@ type Props = {
 export default function LandingPage({ boardCount, componentCount, lessonCount, onStart, onOpenCircuit, onOpenCode, onOpenLessons }: Props) {
   return (
     <main className="landing-shell">
-      <div className="landing-orbit orbit-a" />
-      <div className="landing-orbit orbit-b" />
-      <div className="landing-orbit orbit-c" />
       <section className="landing-hero" aria-labelledby="landing-title">
         <nav className="landing-nav" aria-label="Landing navigation">
           <div className="landing-brand">

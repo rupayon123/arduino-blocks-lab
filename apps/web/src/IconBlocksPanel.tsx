@@ -59,7 +59,7 @@ export default function IconBlocksPanel({ project, componentDefinitions, onProgr
     <div className="icon-workspace">
       <section className="icon-hero">
         <div>
-          <span>Word Blocks</span>
+          <span>Icon Blocks</span>
           <strong>{project.name}</strong>
         </div>
         <div className="icon-hero-actions">

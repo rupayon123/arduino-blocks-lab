@@ -77,7 +77,7 @@ html[data-theme="dark"] {
 html {
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 
 body {
@@ -89,15 +89,15 @@ body {
   height: 100%;
   background: var(--page-wash);
   color: var(--ink);
-  overflow: auto;
+  overflow: hidden;
 }
 
 #root {
   width: 100%;
-  min-height: 100%;
-  min-height: 100vh;
   height: 100%;
-  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
 }
 
 .app-crash-shell {
@@ -168,52 +168,17 @@ body {
   position: relative;
   isolation: isolate;
   min-height: 100vh;
-  height: auto;
-  overflow: visible;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   background:
     linear-gradient(180deg, rgba(255, 254, 253, 0.88), rgba(223, 245, 255, 0.94) 68%, rgba(255, 254, 253, 0.98)),
     linear-gradient(115deg, rgba(138, 217, 255, 0.48), transparent 42%),
     var(--paper);
   color: var(--ink);
   padding-bottom: 38px;
-}
-
-.landing-orbit {
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-  filter: blur(0.1px);
-  mix-blend-mode: screen;
-  z-index: -1;
-  opacity: 0.48;
-}
-
-.landing-orbit.orbit-a {
-  width: 320px;
-  height: 320px;
-  left: -90px;
-  top: 50px;
-  background: radial-gradient(circle at 30% 30%, var(--piplup), transparent 62%);
-  animation: drift-right 12s ease-in-out infinite;
-}
-
-.landing-orbit.orbit-b {
-  width: 220px;
-  height: 220px;
-  right: -52px;
-  top: 240px;
-  background: radial-gradient(circle at 70% 30%, var(--soft-blue), transparent 62%);
-  animation: drift-left 14s ease-in-out infinite;
-}
-
-.landing-orbit.orbit-c {
-  width: 240px;
-  height: 240px;
-  right: 40%;
-  bottom: 80px;
-  background: radial-gradient(circle at 20% 70%, var(--soft-amber), transparent 68%);
-  animation: drift-up 11s ease-in-out infinite;
 }
 
 .landing-hero {
@@ -403,11 +368,296 @@ body {
   backdrop-filter: blur(16px);
 }
 
+.landing-workbench {
+  align-self: center;
+  min-height: 500px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(235, 249, 255, 0.82)),
+    var(--paper);
+  box-shadow: 0 24px 48px rgba(20, 108, 156, 0.14);
+}
+
+.bench-topline,
+.bench-checks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bench-topline span,
+.bench-checks span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.bench-topline span {
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--soft-blue) 78%, var(--paper));
+  color: var(--deep-blue);
+}
+
+.bench-checks span {
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--green) 40%, var(--line));
+  background: color-mix(in srgb, var(--green) 10%, var(--paper));
+  color: var(--green);
+}
+
+.bench-surface {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(20, 168, 224, 0.06) 0 1px, transparent 1px 34px),
+    linear-gradient(0deg, rgba(20, 168, 224, 0.06) 0 1px, transparent 1px 34px),
+    linear-gradient(180deg, var(--field), #ffffff);
+}
+
+.bench-wire {
+  position: absolute;
+  z-index: 1;
+  height: 4px;
+  border-radius: 999px;
+  transform-origin: left center;
+  box-shadow: 0 2px 0 rgba(6, 31, 53, 0.07);
+}
+
+.bench-wire.wire-a {
+  width: 185px;
+  left: 206px;
+  top: 174px;
+  background: var(--coral);
+  transform: rotate(-10deg);
+}
+
+.bench-wire.wire-b {
+  width: 210px;
+  right: 162px;
+  top: 205px;
+  background: var(--amber);
+  transform: rotate(13deg);
+}
+
+.bench-wire.wire-c {
+  width: 170px;
+  left: 186px;
+  bottom: 126px;
+  background: var(--green);
+  transform: rotate(18deg);
+}
+
+.bench-board,
+.bench-blocks,
+.bench-code,
+.bench-breadboard {
+  position: absolute;
+  z-index: 2;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 24px rgba(20, 108, 156, 0.1);
+}
+
+.bench-board {
+  left: 24px;
+  top: 36px;
+  width: 168px;
+  min-height: 190px;
+  padding: 18px 14px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #0999c9, #0d6fa8);
+  color: #fff;
+}
+
+.bench-board strong,
+.bench-board small {
+  position: relative;
+  z-index: 2;
+  display: block;
+}
+
+.bench-board strong {
+  margin-top: 74px;
+  font-size: 27px;
+  letter-spacing: 0.06em;
+}
+
+.bench-board small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 800;
+}
+
+.bench-usb,
+.bench-chip,
+.bench-pins {
+  position: absolute;
+  z-index: 1;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.bench-usb {
+  width: 44px;
+  height: 24px;
+  left: 14px;
+  top: 14px;
+}
+
+.bench-chip {
+  width: 54px;
+  height: 72px;
+  right: 20px;
+  top: 52px;
+  background: rgba(6, 31, 53, 0.72);
+}
+
+.bench-pins {
+  left: 14px;
+  right: 14px;
+  height: 10px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.92) 0 6px, transparent 6px 14px);
+}
+
+.bench-pins.top {
+  top: 54px;
+}
+
+.bench-pins.bottom {
+  bottom: 16px;
+}
+
+.bench-blocks {
+  left: 220px;
+  top: 28px;
+  width: 220px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.block-chip {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #062337;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.block-chip.blue {
+  background: var(--soft-blue);
+}
+
+.block-chip.green {
+  background: color-mix(in srgb, var(--green) 22%, #fff);
+}
+
+.block-chip.amber {
+  background: color-mix(in srgb, var(--amber) 32%, #fff);
+}
+
+.block-chip.coral {
+  background: color-mix(in srgb, var(--coral) 25%, #fff);
+}
+
+.bench-code {
+  right: 24px;
+  top: 42px;
+  width: min(300px, 42%);
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px;
+  background: #092235;
+  color: #d9f6ff;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.bench-code span {
+  display: block;
+  white-space: pre;
+}
+
+.bench-breadboard {
+  left: 226px;
+  right: 24px;
+  bottom: 28px;
+  min-height: 148px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  align-content: center;
+  padding: 18px;
+  background:
+    linear-gradient(90deg, rgba(255, 200, 61, 0.18), transparent 36%, rgba(41, 184, 121, 0.12)),
+    #fff;
+}
+
+.bench-breadboard span {
+  min-height: 54px;
+  border-radius: 8px;
+  background: repeating-linear-gradient(180deg, #d7ecf7 0 5px, transparent 5px 10px);
+}
+
+.bench-breadboard strong {
+  grid-column: 1 / -1;
+  color: var(--heading);
+  font-size: 14px;
+}
+
+html[data-theme="dark"] .landing-workbench,
+html[data-theme="dark"] .bench-blocks,
+html[data-theme="dark"] .bench-breadboard {
+  background: rgba(11, 29, 48, 0.92);
+}
+
+html[data-theme="dark"] .bench-surface {
+  background:
+    linear-gradient(90deg, rgba(20, 168, 224, 0.08) 0 1px, transparent 1px 34px),
+    linear-gradient(0deg, rgba(20, 168, 224, 0.08) 0 1px, transparent 1px 34px),
+    #0c1d2f;
+}
+
+html[data-theme="dark"] .bench-breadboard strong {
+  color: #f2fbff;
+}
+
 .landing-band {
   display: grid;
   gap: 22px;
   padding: 28px clamp(20px, 5vw, 76px) 70px;
   background: var(--paper);
+}
+
+.landing-band-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--heading);
+}
+
+.landing-band-heading span {
+  color: var(--ink);
 }
 
 .landing-stat-row {
@@ -550,11 +800,12 @@ button:disabled {
 
 .app-shell {
   min-height: 100vh;
-  height: auto;
+  min-height: 100dvh;
+  height: 100%;
   background: var(--page-wash);
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
   min-width: 0;
 }
 
@@ -753,7 +1004,7 @@ button:disabled {
   padding: 14px;
   align-items: start;
   overflow: auto;
-  overscroll-behavior: auto;
+  overscroll-behavior: contain;
 }
 
 .workspace-grid.mode-blocks.style-blocks {
@@ -793,6 +1044,7 @@ button:disabled {
 .right-panel {
   min-height: 0;
   min-width: 0;
+  height: 100%;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -5655,8 +5907,9 @@ html[data-theme="dark"] .breadboard-model {
 
   .app-shell {
     min-height: 100vh;
-    height: auto;
-    overflow: visible;
+    min-height: 100dvh;
+    height: 100%;
+    overflow: hidden;
   }
 
   .app-shell > * {
@@ -5919,16 +6172,43 @@ html[data-theme="dark"] .breadboard-model {
   .landing-hero-layout {
     grid-template-columns: 1fr;
     gap: 18px;
+    min-width: 0;
+    width: 100%;
+    max-width: calc(100vw - 32px);
+  }
+
+  .landing-hero-copy {
+    width: 100%;
+    max-width: calc(100vw - 32px);
+    min-width: 0;
+  }
+
+  .landing-kicker {
+    width: 100%;
+    max-width: 100%;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
+
+  .landing-kicker svg {
+    flex: 0 0 auto;
   }
 
   .landing-hero h1 {
-    max-width: 100%;
-    font-size: 46px;
+    max-width: 8ch;
+    font-size: 42px;
     line-height: 0.96;
+    overflow-wrap: normal;
   }
 
   .landing-hero p {
+    width: 100%;
+    max-width: 100%;
     font-size: 16px;
+    overflow-wrap: break-word;
   }
 
   .landing-actions {
@@ -5940,16 +6220,42 @@ html[data-theme="dark"] .breadboard-model {
     width: 100%;
   }
 
-  .bench-topline {
+  .landing-workbench {
+    width: min(100%, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .bench-topline,
+  .bench-checks {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bench-topline span,
+  .bench-checks span {
+    justify-content: center;
+    text-align: center;
   }
 
   .bench-surface {
     grid-template-columns: 1fr;
+    padding: 12px;
   }
 
-  .bench-checks {
-    grid-template-columns: 1fr;
+  .bench-board {
+    min-height: 166px;
+  }
+
+  .bench-code {
+    overflow: auto;
+    font-size: 11px;
+  }
+
+  .bench-breadboard {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: 118px;
   }
 
   .landing-trust-line {

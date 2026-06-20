@@ -142,9 +142,9 @@ const projectStyleOptions: Array<{
 }> = [
   {
     id: "icon",
-    title: "Word Blocks",
+    title: "Icon Blocks",
     kicker: "picture-first",
-    detail: "Build with icon-plus-word blocks and guided steps."
+    detail: "Build with picture-first block cards and guided steps."
   },
   {
     id: "blocks",
@@ -1199,11 +1199,30 @@ export default function App() {
   function applyProjectStyle(nextStyle: ProjectStyle) {
     setProjectStyle(nextStyle);
     if (nextStyle === "code") {
-      setMode("code");
       setCodeView("cpp");
+      setMode("code");
       return;
     }
     setMode("blocks");
+  }
+
+  function openMode(nextMode: Mode, options: { forceBlocksStyle?: boolean } = {}) {
+    if (nextMode === "code") {
+      setProjectStyle("code");
+      setCodeView("cpp");
+      setMode("code");
+      return;
+    }
+
+    if (nextMode === "blocks") {
+      if (options.forceBlocksStyle || projectStyle === "code") {
+        setProjectStyle("blocks");
+      }
+      setMode("blocks");
+      return;
+    }
+
+    setMode(nextMode);
   }
 
   function loadProject(nextProject: ProjectDocument, nextStyle: ProjectStyle = projectStyle) {
@@ -1239,7 +1258,7 @@ export default function App() {
   function loadIdeaProject(idea: ProjectIdea) {
     const nextStyle = projectStyle === "code" ? "blocks" : projectStyle;
     loadProject(idea.project, nextStyle);
-    if (mode !== "circuit") setMode("blocks");
+    if (mode !== "circuit") openMode("blocks");
     setAgentLog((current) => [`Idea loaded: ${idea.title}.`, ...current]);
   }
 
@@ -1602,8 +1621,7 @@ export default function App() {
       return;
     }
     if (action === "open-code") {
-      setMode("code");
-      setCodeView("cpp");
+      openMode("code");
       return;
     }
     return runWorkflowAction(action);
@@ -1762,16 +1780,7 @@ export default function App() {
     if (!window.location.hash.startsWith(projectShareHashPrefix)) {
       window.history.replaceState(null, "", "#workspace");
     }
-    if (nextMode === "code") {
-      setProjectStyle("code");
-      setCodeView("cpp");
-      setMode("code");
-      return;
-    }
-    if (nextMode === "blocks" && projectStyle === "code") {
-      setProjectStyle("blocks");
-    }
-    setMode(nextMode);
+    openMode(nextMode, { forceBlocksStyle: nextMode === "blocks" });
   }
 
   if (landingOpen) {
@@ -1806,22 +1815,21 @@ export default function App() {
             <button
               className={mode === "blocks" ? "active" : ""}
               onClick={() => {
-                setMode("blocks");
-                if (projectStyle === "code") setProjectStyle("blocks");
+                openMode("blocks", { forceBlocksStyle: true });
               }}
             >
               <SquareStack size={18} />
               Blocks
             </button>
-            <button className={mode === "code" ? "active" : ""} onClick={() => setMode("code")}>
+            <button className={mode === "code" ? "active" : ""} onClick={() => openMode("code")}>
               <Code2 size={18} />
               Arduino C++
             </button>
-            <button className={mode === "circuit" ? "active" : ""} onClick={() => setMode("circuit")}>
+            <button className={mode === "circuit" ? "active" : ""} onClick={() => openMode("circuit")}>
               <CircuitBoard size={18} />
               Circuit
             </button>
-            <button className={mode === "lessons" ? "active" : ""} onClick={() => setMode("lessons")}>
+            <button className={mode === "lessons" ? "active" : ""} onClick={() => openMode("lessons")}>
               <Gauge size={18} />
               Lessons
             </button>
@@ -1915,7 +1923,7 @@ export default function App() {
               ) : (
                 <SquareStack size={15} />
               )}
-              <span>{option.id === "icon" ? "Word Blocks" : option.id === "blocks" ? "Blocks" : "Arduino C++"}</span>
+              <span>{option.id === "icon" ? "Icon Blocks" : option.id === "blocks" ? "Blocks" : "Arduino C++"}</span>
             </button>
           ))}
         </div>
@@ -2114,11 +2122,9 @@ export default function App() {
                 project={project}
                 componentDefinitions={activeCatalog.components}
                 onProgramChange={updateFromIconBlocks}
-                onOpenCircuit={() => setMode("circuit")}
+                onOpenCircuit={() => openMode("circuit")}
                 onOpenCode={() => {
-                  setProjectStyle("code");
-                  setMode("code");
-                  setCodeView("cpp");
+                  openMode("code");
                 }}
               />
             ) : (
@@ -2181,8 +2187,7 @@ export default function App() {
               onUpdateConnectionPin={updateConnectionPin}
               onExportWokwiProject={() => void exportWokwiProject()}
               onOpenCode={() => {
-                setCodeView("cpp");
-                setMode("code");
+                openMode("code");
               }}
             />
           )}
@@ -2421,7 +2426,7 @@ export default function App() {
         <aside className="right-panel">
           {mode === "blocks" && (
             <section className="panel-section launchpad-panel">
-              <button className="launchpad-help" onClick={() => setMode("lessons")}>
+              <button className="launchpad-help" onClick={() => openMode("lessons")}>
                 <span className="launchpad-play">
                   <Play size={17} />
                 </span>
