@@ -1,0 +1,69 @@
+name: Hardware validation report
+description: Record a board, lesson, block pack, compile, upload, or serial validation run.
+title: "Hardware validation: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for real-device or simulator validation. Do not include student names, private classroom data, or device serial numbers that should not be public.
+  - type: input
+    id: board
+    attributes:
+      label: Board or target
+      description: Include the board model and FQBN if known.
+      placeholder: Arduino Uno R3, arduino:avr:uno
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Arduino CLI version, and local agent version/branch.
+      placeholder: macOS 15, Chrome, arduino-cli 1.x, main branch
+    validations:
+      required: true
+  - type: input
+    id: lesson_or_pack
+    attributes:
+      label: Lesson, project, or hardware pack
+      placeholder: Blink mission, classroom sensors pack, custom pack URL
+  - type: dropdown
+    id: validation_type
+    attributes:
+      label: What did you validate?
+      options:
+        - Block generation
+        - Compile
+        - Upload
+        - Serial monitor
+        - Wiring canvas
+        - Simulator export
+        - Hardware pack import
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps run
+      description: List the exact steps, commands, or UI actions.
+      placeholder: |
+        1. Started npm run agent
+        2. Selected Arduino Uno
+        3. Opened Blink mission
+        4. Clicked Compile
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: Include pass/fail, errors, warnings, or serial output.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes or follow-ups
+      description: Add screenshots, sanitized logs, or follow-up tasks if useful.
