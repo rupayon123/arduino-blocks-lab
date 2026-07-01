@@ -1,0 +1,45 @@
+name: Hardware pack request
+description: Request support for a board, sensor, actuator, lesson pack, or extension pack.
+title: "Hardware pack: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to request new hardware support or a classroom pack. Link official product docs when possible.
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware or pack name
+      placeholder: DHT11 sensor, Adafruit Circuit Playground, soil moisture lesson pack
+    validations:
+      required: true
+  - type: textarea
+    id: source_links
+    attributes:
+      label: Official docs or source links
+      description: Product page, datasheet, library docs, or classroom guide.
+    validations:
+      required: true
+  - type: textarea
+    id: learner_goal
+    attributes:
+      label: Learner goal
+      description: What should a student be able to build or understand with this pack?
+    validations:
+      required: true
+  - type: textarea
+    id: blocks
+    attributes:
+      label: Suggested blocks or generated code
+      description: List blocks, pins, setup code, loop behavior, libraries, or generated sketch expectations.
+  - type: textarea
+    id: wiring
+    attributes:
+      label: Wiring notes
+      description: Include power, ground, signal pins, buses, voltage limits, or safety notes.
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How should this pack be tested on real hardware or simulator output?

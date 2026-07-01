@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible app, agent, generated-code, compile, upload, or serial issue.
+title: "Bug: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share enough context to reproduce the issue. Remove private student data, local file paths with names you do not want public, and secrets from logs.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Click ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include exact errors or sanitized logs when possible.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, browser, Node version, Arduino CLI version, board/FQBN
+  - type: textarea
+    id: generated_code
+    attributes:
+      label: Generated code or block pack
+      description: Paste a minimal generated sketch, block-pack snippet, or project link if relevant.
+      render: cpp
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context
+      description: Screenshots, serial output, or notes.
